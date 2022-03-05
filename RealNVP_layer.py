@@ -3,21 +3,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-NUM_LAYERS = 3
-
 class RealNVP_Layer(nn.Module):
-    def __init__(self, mask, input_output_size, hidden_size,):
-        super(RealNVP_Layer).__init__()
+    def __init__(self, mask, input_output_size, hidden_size):
+        super(RealNVP_Layer, self).__init__()
 
-        self.mask = torch.randint(2,(input_output_size,))
+        self.mask = mask
         self.input_output_size = input_output_size
         self.hidden_size = hidden_size
 
 
-        self.scale_func = nn.Sequential(self.generate_network(1))
+        self.scale_func = nn.Sequential(*self.generate_network(1))
         self.scale_factor = nn.Parameter(torch.Tensor(input_output_size))
 
-        self.translate_func = nn.Sequential(self.generate_network(1))
+        self.translate_func = nn.Sequential(*self.generate_network(1))
 
     def generate_network(self,intermediate_layers):
         """
@@ -26,10 +24,10 @@ class RealNVP_Layer(nn.Module):
         """
         modules = []
         modules.append(nn.Linear(in_features=self.input_output_size, out_features=self.hidden_size))
-        modules.append(nn.LeakyReLU)
-        for layer_i in intermediate_layers:
+        modules.append(nn.LeakyReLU())
+        for _ in range(intermediate_layers):
             modules.append(nn.Linear(in_features=self.hidden_size,out_features=self.hidden_size))
-            modules.append(nn.LeakyReLU)
+            modules.append(nn.LeakyReLU())
         modules.append(nn.Linear(in_features=self.hidden_size,out_features=self.input_output_size))
 
         return modules
