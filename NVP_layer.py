@@ -34,9 +34,9 @@ class RealNVP_Layer(nn.Module):
 
         return modules
 
-    def forward(self, input):
-        x_1 = self.mask * input  # x_{1:d}
-        x_2 = (1-self.mask) * input # x_{d+1:D}
+    def forward(self, x):
+        x_1 = self.mask * x  # x_{1:d}
+        x_2 = (1-self.mask) * x # x_{d+1:D}
 
 
         #strictly speaking don't need to multiply 1-self.mask for sx_1, since when we multiply by x_2
@@ -47,14 +47,33 @@ class RealNVP_Layer(nn.Module):
         """
         Following output vectors are still D dimensional, but all 
         components not in the corresponding mask are 0
+
+        in computing y_2, torch.exp(sx_1) produces 1s in the 1:d locations since e^0 = 1
+        however, x_2 is already zero'd in these locations so it's fine
         """
         y_1 = x_1 #y_{1:d}
         y_2 = x_2 * (torch.exp(sx_1)) + tx_1 # y_{d+1:D}
     
-        output = y_1 + y_2
+        y = y_1 + y_2
         log_det_jacobian = torch.sum((1-self.mask) * sx_1,-1) #need to multiply by 1-self.mask to re-zero the 0 terms that got exponentiated to 1
         
-        return output, log_det_jacobian
+        return y, log_det_jacobian
+    
+    def inverse(self, y):
+        y_1 = self.mask * y # y_{1:d}
+        y_2 = (1-self.mask) * y # y_{d+1:D}
+
+        sy_1 = (1-self.mask) * self.scale_func(y_1) * self.scale_factor # s(y_{1:d})
+        ty_1 = (1-self.mask) * self.translate_func(y_1) # t(y_{d+1,D})
+
+        x_1 = y_1 #x_{1:d}
+        x_2 = (y_2 - ty_1) * torch.exp(-sy_1) #x_{d+1:D}
+
+        log_det_jacobian = torch.sum((1-self.mask) * (-sy_1),-1)
+
+        return x, log_det_jacobian
+
+
 
     
 
