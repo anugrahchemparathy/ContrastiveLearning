@@ -4,7 +4,27 @@ import torch.nn.functional as F
 from torch.distributions.multivariate_normal import MultivariateNormal
 
 class RealNVPNode(nn.Module):
-    def __init__(self, mask, hidden_size):
+    def __init__(self, mask, input_output_size, hidden_size):
+        """
+        ============
+        num_layers = 4
+        torch.tensor([i % 2 for i in range(num_layers)])
+        --> tensor([0,1,0,1])
+
+        masks = torch.nn.functional.one_hot(torch.tensor([i % 2 for i in range(num_layers)]))
+        --> tensor([
+            [1,0],
+            [0,1],
+            [1,0],
+            [0,1]
+        ])
+
+        masks = torch.nn.functional.one_hot(torch.tensor([i % 2 for i in range(num_layers)])).float()
+        self.masks = nn.ParameterList([nn.Parameter(torch.Tensor(mask), requires_grad=False) for mask in masks])
+        [RealNVPNode(mask, self.hidden_size) for mask in self.masks]
+        mask = [1,0]
+        hidden_size = 32
+        """
         super(RealNVPNode, self).__init__()
         self.dim = len(mask)
         self.mask = nn.Parameter(mask, requires_grad=False)
