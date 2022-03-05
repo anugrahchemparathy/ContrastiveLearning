@@ -35,6 +35,11 @@ class RealNVP_Layer(nn.Module):
         return modules
 
     def forward(self, x):
+        """
+        param: x : [batch_size, input_output_size] vector of inputs
+        returns: y : [batch_size, input_output_size] vector of outputs from coupling layer
+        returns: log_det_jacobian: logarithm of the determinant of the jacobian for this coupling layer for the given input
+        """
         x_1 = self.mask * x  # x_{1:d}
         x_2 = (1-self.mask) * x # x_{d+1:D}
 
@@ -60,6 +65,11 @@ class RealNVP_Layer(nn.Module):
         return y, log_det_jacobian
     
     def inverse(self, y):
+        """
+        param: y : [batch_size, input_output_size] vector of outputs to be inverted
+        returns: x : [batch_size, input_output_size] vector of inputs that would produce the output
+        returns: log_det_jacobian: logarithm of the determinant of the jacobian for this coupling layer for the given input
+        """
         y_1 = self.mask * y # y_{1:d}
         y_2 = (1-self.mask) * y # y_{d+1:D}
 
@@ -68,16 +78,8 @@ class RealNVP_Layer(nn.Module):
 
         x_1 = y_1 #x_{1:d}
         x_2 = (y_2 - ty_1) * torch.exp(-sy_1) #x_{d+1:D}
+        x = x_1 + x_2
 
         log_det_jacobian = torch.sum((1-self.mask) * (-sy_1),-1)
 
         return x, log_det_jacobian
-
-
-
-    
-
-
-        
-
-
