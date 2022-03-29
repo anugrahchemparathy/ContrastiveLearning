@@ -6,6 +6,12 @@ import torch.nn.functional as F
 class RealNVP_Layer(nn.Module):
     def __init__(self, mask, input_output_size, hidden_size):
         super(RealNVP_Layer, self).__init__()
+        """
+        layer that takes in x_{1:D} and returns y_{1:D}
+
+        input_output_size: dimension D
+        hidden_size: the hidden size of a layer.        
+        """
 
         self.mask = mask
         self.input_output_size = input_output_size
@@ -13,7 +19,7 @@ class RealNVP_Layer(nn.Module):
 
 
         self.scale_func = nn.Sequential(*self.generate_network(1))
-        self.scale_factor = nn.Parameter(torch.Tensor(input_output_size))
+        self.scale_factor = nn.Parameter(torch.Tensor(input_output_size).float())
 
         self.translate_func = nn.Sequential(*self.generate_network(1))
 
@@ -34,6 +40,7 @@ class RealNVP_Layer(nn.Module):
 
     def forward(self, x):
         """
+        input_output_size = D
         param: x : [batch_size, input_output_size] vector of inputs
         returns: y : [batch_size, input_output_size] vector of outputs from coupling layer
         returns: log_det_jacobian: logarithm of the determinant of the jacobian for this coupling layer for the given input
@@ -58,9 +65,9 @@ class RealNVP_Layer(nn.Module):
         y_2 = x_2 * (torch.exp(sx_1)) + tx_1 # y_{d+1:D}
     
         y = y_1 + y_2
-        log_det_jacobian = torch.sum((1-self.mask) * sx_1,-1) #need to multiply by 1-self.mask to re-zero the 0 terms that got exponentiated to 1
+        log_det_jacobian = torch.sum(sx_1, dim = -1)
         
-        return y, log_det_jacobian
+        return y, log_det_jacobian # [(batch_size, D), (batch_size)]
     
     def inverse(self, y):
         """
@@ -78,6 +85,6 @@ class RealNVP_Layer(nn.Module):
         x_2 = (y_2 - ty_1) * torch.exp(-sy_1) #x_{d+1:D}
         x = x_1 + x_2
 
-        log_det_jacobian = torch.sum((1-self.mask) * (-sy_1),-1)
+        inverse_log_det_jacobian = -torch.sum(sy_1, dim = -1)
 
-        return x, log_det_jacobian
+        return x, inverse_log_det_jacobian # [(batch_size, D), (batch_size)]
