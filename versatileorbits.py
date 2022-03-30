@@ -212,8 +212,8 @@ class OrbitsDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.size
 
-class OrbitsDataset_NF(torch.utils.data.Dataset):
-    def __init__(self, check=False, num_samples = 1024, transform=None, phi0 = None, H = None, L = None):
+class OrbitsDataset_NF_train(torch.utils.data.Dataset):
+    def __init__(self, noise = 0.1, check=False, num_samples = 1024, transform=None, phi0 = None, H = None, L = None):
         """
         phi0: 
         """
@@ -224,15 +224,15 @@ class OrbitsDataset_NF(torch.utils.data.Dataset):
         self.params = []
         self.data = None
         
-        p, d = orbits_train_gen(1, traj_samples = num_samples, check=check, phi0_val = phi0, H_val = H, L_val = L)
+        p, d = orbits_train_gen(1, noise = noise, traj_samples = num_samples, check=check, phi0_val = phi0, H_val = H, L_val = L)
         for param in p:
             self.params.append(param[0])
         self.data = torch.tensor(d[0]).float()
         
         self.params = np.concatenate(self.params, axis=0)  # e, a, phi0, H, L
-        print(self.params)
-        print(self.data.shape)
-        print(f'It took {time.time() - start} time to finish the job.')
+        #print(self.params)
+        #print(self.data.shape)
+        #print(f'It took {time.time() - start} time to finish the job.')
 
     def __getitem__(self, idx):
         if idx < self.size:
@@ -241,3 +241,18 @@ class OrbitsDataset_NF(torch.utils.data.Dataset):
     def __len__(self):
         return self.size
 
+class OrbitsDataset_NF_gen(torch.utils.data.Dataset):
+    def __init__(self, data):
+        """
+        phi0: 
+        """
+        self.size, self.dim = data.shape        
+        self.data = data
+
+
+    def __getitem__(self, idx):
+        if idx < self.size:
+            return self.data[idx]
+
+    def __len__(self):
+        return self.size
