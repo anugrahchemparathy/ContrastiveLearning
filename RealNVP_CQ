@@ -1,11 +1,16 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions.multivariate_normal import MultivariateNormal
 
 
-class RealNVP_Layer(nn.Module):
+from RealNVP_layer import RealNVP_Layer
+import masks
+
+
+class RealNVP_Layer_Augmented(nn.Module):
     def __init__(self, mask, layer_dim, hidden_size):
-        super(RealNVP_Layer, self).__init__()
+        super(RealNVP_Layer_Augmented, self).__init__()
         """
         layer that takes in x_{1:D} and returns y_{1:D}
 
@@ -29,7 +34,7 @@ class RealNVP_Layer(nn.Module):
         Uses LeakyReLU activations
         """
         modules = []
-        modules.append(nn.Linear(in_features=self.layer_dim, out_features=self.hidden_size))
+        modules.append(nn.Linear(in_features=self.layer_dim + 3, out_features=self.hidden_size))
         modules.append(nn.LeakyReLU())
         for _ in range(intermediate_layers):
             modules.append(nn.Linear(in_features=self.hidden_size,out_features=self.hidden_size))
@@ -88,3 +93,63 @@ class RealNVP_Layer(nn.Module):
         inverse_log_det_jacobian = -torch.sum(sy_1, dim = -1)
 
         return x, inverse_log_det_jacobian # [(batch_size, D), (batch_size)]
+
+
+class RealNVP_Augmented(nn.Module):
+    def __init__(self, layer_dim, hidden_size=12, num_layers = 3):
+        super(RealNVP, self).__init__()
+
+        self.layer_dim = layer_dim
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+
+        #save masks in a parameterlist so they can be saved with the model for reference
+        self.masks = nn.ParameterList([nn.Parameter(torch.Tensor(mask), requires_grad=False) for mask in masks.mask2(self.layer_dim, self.num_layers)])
+
+        self.layers = nn.ModuleList([RealNVP_Layer(mask,self.layer_dim,self.hidden_size) for mask in self.masks])
+
+
+        self.distribution = MultivariateNormal(torch.zeros(self.layer_dim), torch.eye(self.layer_dim))
+
+    def forward(self, x):
+        output = x
+        log_probability = 0
+        for layer in self.layers:
+            output, log_det_jacobian = layer(output)
+            log_probability += log_det_jacobian
+        
+
+        return output, log_probability
+
+    def forward_sample(self, num_samples, conserved_quantities):
+        """
+        num_samples: the number of points to generate
+        conserved_quantities: torch tensor of [phi0,H,L]
+        """
+        inputs = self.distribution.sample((num_samples,)) # (num_samples, self.layer_dim)
+        log_probability = self.distribution.log_prob(inputs)
+
+        outputs = inputs
+        conserved_quantities = conserved_quantities[:,None] #unsqueeze for concatenation broadcasting
+        for layer in self.layers:
+            outputs, log_det_jacobian = layer(outputs, conserved_quantities)
+            log_probability += log_det_jacobian
+        
+
+        return outputs, log_probability
+
+    def log_probability(self, y):
+        """
+        param y: (batch_size, layer_dim) array
+        """
+        batch_size, _ = y.shape
+        log_probability = torch.zeros(batch_size)
+
+        for layer in reversed(self.layers):
+            #print("layer, new y =", y[:5])
+            y, inverse_log_det_jacobian = layer.inverse(y)
+            log_probability += inverse_log_det_jacobian
+        
+        log_probability += self.distribution.log_prob(y)
+
+        return log_probability

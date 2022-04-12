@@ -8,20 +8,20 @@ from RealNVP_layer import RealNVP_Layer
 import masks
 
 class RealNVP(nn.Module):
-    def __init__(self, input_output_size, hidden_size=12, num_layers = 3):
+    def __init__(self, layer_dim, hidden_size=12, num_layers = 3):
         super(RealNVP, self).__init__()
 
-        self.input_output_size = input_output_size
+        self.layer_dim = layer_dim
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
         #save masks in a parameterlist so they can be saved with the model for reference
-        self.masks = nn.ParameterList([nn.Parameter(torch.Tensor(mask), requires_grad=False) for mask in masks.mask2(self.input_output_size, self.num_layers)])
+        self.masks = nn.ParameterList([nn.Parameter(torch.Tensor(mask), requires_grad=False) for mask in masks.mask2(self.layer_dim, self.num_layers)])
 
-        self.layers = nn.ModuleList([RealNVP_Layer(mask,self.input_output_size,self.hidden_size) for mask in self.masks])
+        self.layers = nn.ModuleList([RealNVP_Layer(mask,self.layer_dim,self.hidden_size) for mask in self.masks])
 
 
-        self.normal_distribution = MultivariateNormal(torch.zeros(self.input_output_size), torch.eye(self.input_output_size))
+        self.distribution = MultivariateNormal(torch.zeros(self.layer_dim), torch.eye(self.layer_dim))
 
     def forward(self, x):
         output = x
@@ -35,7 +35,7 @@ class RealNVP(nn.Module):
 
     def forward_sample(self, num_samples):
         inputs = self.distribution.sample((num_samples,))
-        log_probability = self.normal_distribution.log_prob(inputs)
+        log_probability = self.distribution.log_prob(inputs)
 
         outputs = inputs
         for layer in self.layers:
@@ -47,7 +47,7 @@ class RealNVP(nn.Module):
 
     def log_probability(self, y):
         """
-        param y: (batch_size, input_output_size) array
+        param y: (batch_size, layer_dim) array
         """
         batch_size, _ = y.shape
         log_probability = torch.zeros(batch_size)
@@ -57,6 +57,6 @@ class RealNVP(nn.Module):
             y, inverse_log_det_jacobian = layer.inverse(y)
             log_probability += inverse_log_det_jacobian
         
-        log_probability += self.normal_distribution.log_prob(y)
+        log_probability += self.distribution.log_prob(y)
 
         return log_probability
