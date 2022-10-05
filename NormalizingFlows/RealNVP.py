@@ -11,7 +11,7 @@ class RealNVP(nn.Module):
     def __init__(self, layer_dim, hidden_size=12, num_layers = 3):
         super(RealNVP, self).__init__()
 
-        self.layer_dim = layer_dim
+        self.layer_dim = layer_dime
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 

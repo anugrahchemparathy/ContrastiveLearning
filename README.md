@@ -1,1 +1,1 @@
-Implementation of RealNVP normalizing flow for use in orbits data
+tools for contrastive learning on physics data

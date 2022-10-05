@@ -1,9 +1,11 @@
 .DS_Store
 
 .vscode/
-.ipynb_checkpoints/
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
 __pycache__/
+
+
+ExperimentsOLD/
 Scratch/
-
-
 Notes/
