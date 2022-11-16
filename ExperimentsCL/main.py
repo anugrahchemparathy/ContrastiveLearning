@@ -2,6 +2,10 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
+import os
+import argparse
+import sys
+sys.path.append('./') # now can access entire repository, (important when running locally)
 
 
 from models import branch, predictor
@@ -17,12 +21,18 @@ from Losses.NCE_losses import infoNCE, rmseNCE, normalmseNCE
 
 
 
+FOLDER_ROOT = os.getcwd() + "/cl/ExperimentsCL/"
+SCRIPT_PATH = "ExperimentsCL/"
 
+def training_loop(args):
 
-def training_loop(args, encoder = None):
-
-
-    dataloader_kwargs = dict(drop_last=True, pin_memory=True, num_workers=16)
+    """
+    drop_last: drop the last non_full batch (potentially useful for training weighting etc.)
+    pin_memory: speed dataloader transfer to cuda
+    num_workers: multiprocess data loading
+    """
+    # dataloader_kwargs = dict(drop_last=True, pin_memory=True, num_workers=16)
+    dataloader_kwargs = {}
     train_orbits_dataset = neworbits.OrbitsDataset()
     train_orbits_loader = torch.utils.data.DataLoader(
         dataset = train_orbits_dataset,
@@ -31,9 +41,13 @@ def training_loop(args, encoder = None):
         **dataloader_kwargs
     )
 
-    if not encoder: encoder = branch.branchEncoder()
-
-    optimizer = torch.optim.SGD(encoder.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.wd)
+    encoder = branch.branchEncoder()
+    custom_parameters = [{
+            'name': 'base',
+            'params': encoder.parameters(),
+            'lr': args.lr
+        }]
+    optimizer = torch.optim.SGD(custom_parameters, lr=args.lr, momentum=0.9, weight_decay=args.wd)
     lr_scheduler = LR_Scheduler(
         optimizer=optimizer,
         warmup_epochs=args.warmup_epochs,
@@ -43,8 +57,7 @@ def training_loop(args, encoder = None):
         final_lr=0,
         iter_per_epoch=len(train_orbits_loader),
         constant_predictor_lr=True
-    )
-
+    )  
 
     # helpers
     def get_z(x):
@@ -64,8 +77,10 @@ def training_loop(args, encoder = None):
             encoder.zero_grad()
 
             # forward pass
-            z1 = get_z(input1.cuda())
-            z2 = get_z(input2.cuda())
+            # z1 = get_z(input1.cuda())
+            # z2 = get_z(input2.cuda())
+            z1 = get_z(input1)
+            z2 = get_z(input2)
             loss = apply_loss(z1, z2)
             total_loss += loss.item()
 
@@ -78,17 +93,30 @@ def training_loop(args, encoder = None):
         print("epoch" + str(e) + "    loss = " + str(loss))
 
 
-    save_progress_path = save_folder + "/" + SAVE_PROGRESS_PREFIX + "FINAL.pt"
-    torch.save(main_branch.encoder, save_progress_path)
+    model_name = "orbits_mseNCE_encoder_model.pt"
+    save_progress_path = SCRIPT_PATH + "saved_models/" + model_name
+    torch.save(encoder, save_progress_path)
+    # torch.save(encoder, model_name)
+
     
-
-    training_log.close()
-    performance_log.close()
-    return main_branch.encoder
+    
+    return encoder
 
 
 
 
+if __name__ == '__main__':
+    pass
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--epochs', default=100, type=int)
+    parser.add_argument('--lr', default=0.02, type=float)
+    parser.add_argument('--bsz', default=512, type=int)
+    parser.add_argument('--wd', default=0.001, type=float)
+    parser.add_argument('--warmup_epochs', default=5, type=int)
+    parser.add_argument('--fine_tune', default=False, type=bool)
+
+    args = parser.parse_args()
+    training_loop(args)
 
 
 

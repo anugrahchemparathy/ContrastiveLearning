@@ -36,37 +36,95 @@ def eccentric_anomaly_from_mean(e, M, tol=1e-14):
             print('Current dE: ', dE[dE > tol])
             print('eccentricity: ', np.repeat(e, dE.shape[-1], axis=-1)[dE > tol])
             raise RuntimeError(f'Did not converge after {MAX_ITERATIONS} iterations with tolerance {tol}.')
+            #return None
     return E
 
+def excluded_uniform_distribution(lower,higher,batch_size):
+    """
+    Generate a distribution from 0 - 1 excluding (lower, higher)
+    """
+    total = lower + (1-higher)
+    lower_bsz = int(np.floor(lower/total * batch_size))
+    higher_bsz = int(np.floor((1-higher)/total*batch_size))
+    if lower_bsz + higher_bsz < batch_size:
+        higher_bsz += 1
 
-def orbits_train_gen(batch_size, traj_samples=100, noise=0., shuffle=True, check=False, H=None, L=None, phi0=None):
+    lower_vals = rng.uniform(low=0.0, high=lower, size=(lower_bsz,1))
+    higher_vals = rng.uniform(low=higher, high = 1.0, size=(higher_bsz,1))
+
+    return_vals = np.vstack([lower_vals,higher_vals])
+
+    #return_vals = return_vals[:, np.random.permutation(return_vals.shape[1])]
+    np.random.shuffle(return_vals)
+
+    return return_vals
+
+def orbits_train_gen(batch_size, traj_samples=100, noise=0., shuffle=True, check=False, H_val=None, L_val=None, phi0_val=None,exclude_values=[], val_lower=None, val_higher = None):
+
+    # t = np.cumsum(rng.exponential(scale=10., size=(batch_size, traj_samples)), axis=-1)
+
     mu = 1.  # standard gravitational parameter, i.e. G*M
+
     E = None
     while E is None:
-        #print('batch size =', batch_size, ' traj_samples =', traj_samples)
+
         # randomly sampled observation times
         t = rng.uniform(0, 10. * traj_samples, size=(batch_size, traj_samples))
-        # t = np.cumsum(rng.exponential(scale=10., size=(batch_size, traj_samples)), axis=-1)
 
-        H = -mu / 2 * (0.5 + 0.5 * rng.uniform(size=(batch_size, 1))) if H is None else H * np.ones((batch_size, 1))
-        L = rng.uniform(size=(batch_size, 1)) if L is None else L * np.ones((batch_size, 1))
+        if H_val is None: #energy
+            if "H" in exclude_values:
+                #print("H domain partially excluded!")
+                H = -mu / 2 * (0.5 + 0.5 * excluded_uniform_distribution(val_lower,val_higher,batch_size))
+            else:
+                H = -mu / 2 * (0.5 + 0.5 * rng.uniform(size=(batch_size, 1)))
+        else: 
+            H = H_val * np.ones((batch_size, 1))
+            
+
+        if L_val is None: #angular momentum
+            if "L" in exclude_values:
+                L = excluded_uniform_distribution(val_lower,val_higher,batch_size)
+            else:
+                L = rng.uniform(size=(batch_size, 1))
+        else:
+            L = L_val * np.ones((batch_size, 1))
+            #L standard value = 0.5
 
         a = -mu / (2 * H)  # semi-major axis
-        e = np.sqrt(1 - L ** 2 / (mu * a))
+        e = np.sqrt(1 - L ** 2 / (mu * a)) #eccentricity?
 
-        #print('eshape =', e.shape)
-        #print('tshape =', t.shape)
+        """
+            y target indices correspond to:
 
-        phi0 = 2 * np.pi * rng.uniform(size=(batch_size, 1)) if phi0 is None else phi0 * np.ones((batch_size, 1))
+            0 = e = eccentricity
+            1 = a = semimajor axis
 
+
+            most relevant
+            2 = phi0 = orientation of the orbit
+            3 = H = energy
+            4 = L = angular momentum
+        """
+
+        if phi0_val is None:
+            if "phi0" in exclude_values:
+                phi0 = 2 * np.pi * excluded_uniform_distribution(val_lower,val_higher,batch_size)
+            else:
+                phi0 = 2 * np.pi * rng.uniform(size=(batch_size, 1))
+        else:
+            phi0 = phi0_val * np.ones((batch_size, 1))
+            #phi0 standard value = np.pi
+        
         # https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
         T = 2 * np.pi * np.sqrt(a ** 3 / mu)  # period
         M = np.fmod(2 * np.pi * t / T, 2 * np.pi)  # mean anomaly
-        
+
         try:
             E = eccentric_anomaly_from_mean(e, M)  # eccentric anomaly
         except:
             pass
+    
+
     phi = 2 * np.arctan2(np.sqrt(1 + e) * np.sin(E / 2), np.sqrt(1 - e) * np.cos(E / 2))  # true anomaly/angle
     r = (a * (1 - e ** 2)) / (1 + e * np.cos(phi))  # radius
     pos = np.stack((r * np.cos(phi + phi0), r * np.sin(phi + phi0)), axis=-1)  # position rotated by phi0
@@ -106,7 +164,15 @@ def orbits_train_gen(batch_size, traj_samples=100, noise=0., shuffle=True, check
 
 
 class OrbitsDataset(torch.utils.data.Dataset):
-    def __init__(self, size=10240, check=False, gen_batch=128, transform=None):
+    def __init__(self, size=10240, check=False, gen_batch=128, transform=None,H_val=None,L_val=None,phi0_val=None,exclude_values=[], val_lower=None, val_higher = None):
+        """
+        phiO=True,H=True,L=True to decide whether or not to fix phi0,H,L
+        H = Energy
+        L = Angular Momentum
+
+        L standard value = 0.5
+        phi0 standard value = np.pi
+        """
         self.transform = transform
         self.size = size
         start = time.time()
@@ -114,7 +180,7 @@ class OrbitsDataset(torch.utils.data.Dataset):
         self.params = [[], [], [], [], []]
         self.data = []
         for _ in range(num_batch):
-            p, d = orbits_train_gen(gen_batch, check=check)
+            p, d = orbits_train_gen(gen_batch, check=check,H_val=H_val,L_val=L_val,phi0_val=phi0_val,exclude_values=exclude_values, val_lower=val_lower, val_higher = val_higher)
             for i in range(len(self.params)):
                 self.params[i].append(p[i])
             self.data.append(d)
@@ -146,21 +212,47 @@ class OrbitsDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.size
 
+class OrbitsDataset_NF_train(torch.utils.data.Dataset):
+    def __init__(self, noise = 0.1, check=False, num_samples = 1024, transform=None, phi0 = None, H = None, L = None):
+        """
+        phi0: 
+        """
+        self.transform = transform
+        self.size = num_samples
+        start = time.time()
+        
+        self.params = []
+        self.data = None
+        
+        p, d = orbits_train_gen(1, noise = noise, traj_samples = num_samples, check=check, phi0_val = phi0, H_val = H, L_val = L)
+        for param in p:
+            self.params.append(param[0])
+        self.data = torch.tensor(d[0]).float()
+        
+        self.params = np.concatenate(self.params, axis=0)  # e, a, phi0, H, L
+        #print(self.params)
+        #print(self.data.shape)
+        #print(f'It took {time.time() - start} time to finish the job.')
 
-if __name__ == '__main__':
-    orbits_dataset = OrbitsDataset()
-    params = orbits_dataset.params
-    data = orbits_dataset.data
-    
-    train_orbits_loader = torch.utils.data.DataLoader(
-        dataset = orbits_dataset,
-        shuffle = True,
-        batch_size = 5,
-    )
+    def __getitem__(self, idx):
+        if idx < self.size:
+            return self.data[idx]
 
-    print(len(train_orbits_loader))
-    for inp1,inp2,y in train_orbits_loader:
-        print(len(inp1))
-        print(type(inp1[0]))
-        break
+    def __len__(self):
+        return self.size
 
+class OrbitsDataset_NF_gen(torch.utils.data.Dataset):
+    def __init__(self, data):
+        """
+        phi0: 
+        """
+        self.size, self.dim = data.shape        
+        self.data = data
+
+
+    def __getitem__(self, idx):
+        if idx < self.size:
+            return self.data[idx]
+
+    def __len__(self):
+        return self.size
