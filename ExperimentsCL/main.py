@@ -73,7 +73,6 @@ def training_loop(args):
         # main_branch.train()
 
         for it, (input1, input2, y) in enumerate(train_orbits_loader):
-            # zero the gradients
             encoder.zero_grad()
 
             # forward pass

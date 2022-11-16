@@ -114,7 +114,7 @@ def orbits_train_gen(batch_size, traj_samples=100, noise=0., shuffle=True, check
             4 = L = angular momentum
         """
         # print(H,L,phi0)
-        print(H.shape, L.shape)
+        # print(H.shape, L.shape)
 
         # https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
         T = 2 * np.pi * np.sqrt(a ** 3 / mu)  # period
