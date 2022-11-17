@@ -45,7 +45,7 @@ def training_loop(args):
 
 
     encoder = branch.branchEncoder(encoder_out=3)
-    model_type = "3Dorbits_mseNCE_new/"
+    model_type = "3Dorbits_rmseNCE/"
     save_progress_path = SCRIPT_PATH + "saved_models/" + model_type
     os.mkdir(save_progress_path)
 
@@ -69,8 +69,11 @@ def training_loop(args):
     # helpers
     def get_z(x):
         return encoder(x.float())
-    def apply_loss(z1, z2):
+    def apply_loss_normal(z1, z2):
         loss = 0.5 * normalmseNCE(z1, z2) + 0.5 * normalmseNCE(z2, z1)
+        return loss
+    def apply_loss_rmse(z1, z2):
+        loss = 0.5 * rmseNCE(z1, z2) + 0.5 * rmseNCE(z2, z1)
         return loss
 
 
@@ -85,7 +88,7 @@ def training_loop(args):
             # z2 = get_z(input2.cuda())
             z1 = get_z(input1)
             z2 = get_z(input2)
-            loss = apply_loss(z1, z2)
+            loss = apply_loss_rmse(z1, z2)
 
             # optimization step
             loss.backward()
