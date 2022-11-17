@@ -24,6 +24,8 @@ from Losses.NCE_losses import infoNCE, rmseNCE, normalmseNCE
 FOLDER_ROOT = os.getcwd() + "/cl/ExperimentsCL/"
 SCRIPT_PATH = "ExperimentsCL/"
 
+saved_epochs = list(range(20)) + [20,40,60,80]
+
 def training_loop(args):
 
     """
@@ -41,7 +43,12 @@ def training_loop(args):
         **dataloader_kwargs
     )
 
-    encoder = branch.branchEncoder()
+
+    encoder = branch.branchEncoder(encoder_out=3)
+    model_type = "3Dorbits_mseNCE_new/"
+    save_progress_path = SCRIPT_PATH + "saved_models/" + model_type
+    os.mkdir(save_progress_path)
+
     custom_parameters = [{
             'name': 'base',
             'params': encoder.parameters(),
@@ -67,9 +74,7 @@ def training_loop(args):
         return loss
 
 
-    total_loss = 0
-    for e in range(1, args.epochs + 1): #loop through each epoch
-        # declaring train
+    for e in range(args.epochs):
         # main_branch.train()
 
         for it, (input1, input2, y) in enumerate(train_orbits_loader):
@@ -81,7 +86,6 @@ def training_loop(args):
             z1 = get_z(input1)
             z2 = get_z(input2)
             loss = apply_loss(z1, z2)
-            total_loss += loss.item()
 
             # optimization step
             loss.backward()
@@ -91,11 +95,11 @@ def training_loop(args):
         #print the loss of the last iteration of that epoch
         print("epoch" + str(e) + "    loss = " + str(loss))
 
+        if e in saved_epochs:
+            torch.save(encoder, save_progress_path + str(e) + '_encoder.pt')
 
-    model_name = "orbits_mseNCE_encoder_model.pt"
-    save_progress_path = SCRIPT_PATH + "saved_models/" + model_name
-    torch.save(encoder, save_progress_path)
-    # torch.save(encoder, model_name)
+
+    torch.save(encoder, save_progress_path + 'final_encoder.pt')
 
     
     
