@@ -4,7 +4,7 @@
     "use_cached_data": "True",
     "verbose": "True",
     "pendulum_settings": {
-        "num_energies": 512,
+        "num_energies": 5120,
         "num_ts": 10,
         "energy_distr": {
             "type": "uniform",
