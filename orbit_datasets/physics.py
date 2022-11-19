@@ -19,6 +19,8 @@ verbose = True
 def read_config(f):
     """
         Read config files. Implement this in a function in case we need to change this at some point.
+
+        We should probably move this somewhere else at some point, as the training loop will need it as well.
         
         :param: f: path to config file to be read
         :return: x: an object with attributes that are the defined parameters
@@ -43,7 +45,7 @@ def sample_distribution(dist, num):
         else:
             raise NotImplementedError # implement multi-d
     elif dist.type == "uniform_with_intervals":
-        # Note: this is uniform across the uniform of all intervals,
+        # Note: this is uniform across the union of all intervals,
         # i.e. if some intervals are longer than other intervals,
         # they will be more likely.
 
@@ -87,7 +89,7 @@ def pendulum_num_gen(config):
     k2 = sample_distribution(settings.energy_distr, settings.num_energies)[:, np.newaxis, np.newaxis]
 
     sn, cn, dn, _ = ellipj(t, k2) # fix this more
-    q = 2 * np.arcsin(np.sqrt(k2) * sn) # angle
+    q = 2 * np.arcsin(np.sqrt(k2) * sn)
     p = 2 * np.sqrt(k2) * cn * dn / np.sqrt(1 - k2 * sn ** 2) # anglular momentum
     data = np.stack((q, p), axis=-1)
 
