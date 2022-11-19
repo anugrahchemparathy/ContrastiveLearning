@@ -11,6 +11,8 @@ import glob
 import os
 import shutil
 
+import matplotlib.pyplot as plt
+
 rng = np.random.default_rng()
 verbose = True
 
@@ -40,6 +42,33 @@ def sample_distribution(dist, num):
             return rng.uniform(dist.min, dist.max, size=num)
         else:
             raise NotImplementedError # implement multi-d
+    elif dist.type == "uniform_with_intervals":
+        # Note: this is uniform across the uniform of all intervals,
+        # i.e. if some intervals are longer than other intervals,
+        # they will be more likely.
+
+        if dist.dims == 1:
+            if dist.mode == "even_space": # evenly spaced gaps
+                intervals = [[(2 * i) / (2 * dist.intervals - 1), (2 * i + 1) / (2 * dist.intervals - 1)] for i in range(0, dist.intervals)]
+                intervals = np.array(intervals)
+                intervals = intervals * (dist.max - dist.min) + dist.min
+            elif dist.mode == "explicit": # explicitly described gaps
+                intervals = np.array(dist.intervals)
+
+            sizes = np.cumsum(intervals[:, 1] - intervals[:, 0])
+            ret = rng.uniform(0, sizes[-1], size=num)
+
+            whichgap = np.searchsorted(sizes, ret)
+            indent = (intervals[:, 0] - np.concatenate(([0], sizes[:-1])))[whichgap]
+            
+            return ret + indent
+        else:
+            raise NotImplementedError
+    elif dist.type == "exponential":
+        if dist.dims == 1:
+            return dist.shift + rng.exponential(dist.scale, size=num)
+        else:
+            raise NotImplementedError
     else:
         raise NotImplementedError # implement other kinds of distributions
 
@@ -238,4 +267,15 @@ def get_dataset(config):
         np.save(folder_name + "/" + key, bundle[key])
     shutil.copy(config_file, folder_name + "/config.json")
 
-get_dataset("pendulum_config_default.json")
+# Template to test distribution generation.
+"""class TestDistribution:
+    def __init__(self):
+        self.type = "exponential"
+        self.dims = 1
+        self.scale = 1
+        self.shift = -1
+
+dist = TestDistribution()
+
+plt.scatter(np.zeros((1000,)), sample_distribution(dist, 1000), s=0.1)
+plt.show()"""
