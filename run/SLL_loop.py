@@ -18,21 +18,28 @@ import torchvision.transforms as T
 
 
 
-from cl.tools.seed import set_deterministic
-from cl.optimizers.LR_scheduler import LR_Scheduler
-#====================================================
-
-#added imports
-from orbit_datasets import neworbits, versatileorbits, staticorbits
-from Losses.NCE_losses import infoNCE, rmseNCE, normalmseNCE
-
-
-
+from ldcl.tools.seed import set_deterministic
+from ldcl.optimizers.lr_scheduler import LR_Scheduler
+from ldcl.data import neworbits, versatileorbits, staticorbits
+from ldcl.losses.nce import infoNCE, rmseNCE, normalmseNCE
 
 #====================================================
 #function from seed.py in /cl/tools/seed.py
 set_deterministic(42)
 
+# Set device: CUDA if available, MPS next, or CPU
+device = None
+if torch.cuda.is_available():
+    device = torch.device("cuda:0")
+else:
+    try:
+        if torch.backends.mps.is_available():
+            device = torch.device("mps")
+    except:
+        pass
+
+if device == None:
+    device = torch.device("cpu")
 
 #====================================================
 class Branch(nn.Module):
@@ -104,10 +111,10 @@ class TopPredictor(nn.Module):
 #====================================================
 
 def contrastivelearning_loop(args, encoder=None):
-    FOLDER_ROOT = os.path.expanduser("~/contrastive_learning/experiments/anugrahtests")
+    FOLDER_ROOT = os.path.expanduser("../experiments/")
     #just equivalent to
     #FOLDER_ROOT = "/home/anugrah/contrastive_learning/experiments/anugrahtests"
-    NEW_FOLDER_NAME = "/TESTING_NEW_FILE_SYSTEM"
+    NEW_FOLDER_NAME = "first_test"
 
 
     save_folder = FOLDER_ROOT+NEW_FOLDER_NAME
@@ -127,8 +134,8 @@ def contrastivelearning_loop(args, encoder=None):
         performance_log.write("================================================== \n")
         total_loss = 0
         for it, (inputs1,inputs2,y) in enumerate(train_orbits_loader):
-            z1 = get_z(inputs1.cuda())
-            z2 = get_z(inputs2.cuda())
+            z1 = get_z(inputs1.to(device))
+            z2 = get_z(inputs2.to(device))
             loss = apply_loss(z1, z2)
             total_loss += loss[0].item()
 
@@ -147,10 +154,11 @@ def contrastivelearning_loop(args, encoder=None):
         batch_size = args.bsz,
         **dataloader_kwargs
     )
+    print("complete with data gen")
     
 
     #create a branch network
-    main_branch = Branch(64, encoder=encoder).cuda()
+    main_branch = Branch(64, encoder=encoder).to(device)
 
 
     # optimization
@@ -210,8 +218,8 @@ def contrastivelearning_loop(args, encoder=None):
             main_branch.zero_grad()
 
             # forward pass
-            z1 = get_z(input1.cuda())
-            z2 = get_z(input2.cuda())
+            z1 = get_z(input1.to(device))
+            z2 = get_z(input2.to(device))
             loss = apply_loss(z1, z2)
 
             # optimization step
@@ -259,9 +267,6 @@ def toppredictortraining_loop(args):
             performance_log.write(("iter" + str(it) + "    loss = " + str(loss)+'\n'))
         performance_log.write("TOTAL LOSS = " + str(total_loss) + '\n')
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-
     FOLDER_ROOT = os.path.expanduser("~/contrastive_learning/experiments/anugrahtests")
     #just equivalent to
     #FOLDER_ROOT = "/home/anugrah/contrastive_learning/experiments/anugrahtests"
@@ -274,15 +279,15 @@ def toppredictortraining_loop(args):
 
 
     ENCODER_PATH = FOLDER_ROOT + "/orbits3DwnormalMSE/orbits_InfoNCE_encoder_modelFINAL.pt"
-    branch_encoder = torch.load(ENCODER_PATH, map_location=torch.device('cuda'))
+    branch_encoder = torch.load(ENCODER_PATH, map_location=device)
 
     if args.fine_tune:
         PREDICTOR_PATH = FOLDER_ROOT + "/orbitsSupervisedTopPredictorver1/top_predictor_orbits_topPredictor_final.pt"
-        top_predictor = torch.load(PREDICTOR_PATH, map_location=torch.device('cuda'))
+        top_predictor = torch.load(PREDICTOR_PATH, map_location=device)
     
-        full_net = TopPredictor(encoder=branch_encoder, predictor=top_predictor, fine_tuning=args.fine_tune, predictor_hidden=64).cuda()
+        full_net = TopPredictor(encoder=branch_encoder, predictor=top_predictor, fine_tuning=args.fine_tune, predictor_hidden=64).to(device)
     else:
-        full_net = TopPredictor(encoder=branch_encoder, predictor_hidden=64).cuda()
+        full_net = TopPredictor(encoder=branch_encoder, predictor_hidden=64).to(device)
 
     #create a train_loader to load training data
     train_orbits_dataset = versatileorbits.OrbitsDataset(exclude_values=['H','L'],val_lower=0.25,val_higher=0.75)
@@ -390,14 +395,14 @@ def toppredictortraining_loop(args):
 
 
 if __name__ == '__main__':
-    pass
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--epochs', default=100, type=int)
-    # parser.add_argument('--lr', default=0.02, type=float)
-    # parser.add_argument('--bsz', default=512, type=int)
-    # parser.add_argument('--wd', default=0.001, type=float)
-    # parser.add_argument('--warmup_epochs', default=5, type=int)
-    # parser.add_argument('--fine_tune', default=False, type=bool)
+    #pass
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--epochs', default=100, type=int)
+    parser.add_argument('--lr', default=0.02, type=float)
+    parser.add_argument('--bsz', default=512, type=int)
+    parser.add_argument('--wd', default=0.001, type=float)
+    parser.add_argument('--warmup_epochs', default=5, type=int)
+    parser.add_argument('--fine_tune', default=False, type=bool)
 
-    # args = parser.parse_args()
-    # toppredictortraining_loop(args)
+    args = parser.parse_args()
+    contrastivelearning_loop(args)

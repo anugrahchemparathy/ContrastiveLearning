@@ -5,10 +5,10 @@ import torch
 import torch.nn as nn
 import time
 
-rng = np.random.default_rng(10)  # manually seed random number generator
+rng = np.random.default_rng(8)  # manually seed random number generator
 from scipy.special import ellipj
 
-MAX_ITERATIONS = 1000
+MAX_ITERATIONS = 10000
 
 
 def eccentric_anomaly_from_mean(e, M, tol=1e-14):
@@ -66,6 +66,7 @@ def orbits_train_gen(batch_size, traj_samples=100, noise=0., shuffle=True, check
         try:
             E = eccentric_anomaly_from_mean(e, M)  # eccentric anomaly
         except:
+            print("data generation failed.")
             pass
     phi = 2 * np.arctan2(np.sqrt(1 + e) * np.sin(E / 2), np.sqrt(1 - e) * np.cos(E / 2))  # true anomaly/angle
     r = (a * (1 - e ** 2)) / (1 + e * np.cos(phi))  # radius

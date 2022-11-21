@@ -5,6 +5,10 @@
 */.ipynb_checkpoints/*
 __pycache__/
 
+experiments/
+experiments/saved_models/*
+ldcl.egg-info/
+saved_datasets/
 
 ExperimentsOLD/
 Scratch/
