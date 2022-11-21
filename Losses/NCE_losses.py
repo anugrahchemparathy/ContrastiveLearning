@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 def infoNCE(nn, p, temperature=0.1):
     nn = torch.nn.functional.normalize(nn, dim=1)
     p = torch.nn.functional.normalize(p, dim=1)
@@ -9,7 +11,7 @@ def infoNCE(nn, p, temperature=0.1):
     logits = nn @ p.T
     logits /= temperature
     n = p.shape[0]
-    labels = torch.arange(0, n, dtype=torch.long).cuda()
+    labels = torch.arange(0, n, dtype=torch.long).to(device)
     loss = torch.nn.functional.cross_entropy(logits, labels)
     return loss
 
