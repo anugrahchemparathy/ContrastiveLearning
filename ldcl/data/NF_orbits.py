@@ -59,8 +59,6 @@ def excluded_uniform_distribution(lower,higher,batch_size):
 
     return return_vals
 
-
-
 def orbits_train_gen(batch_size, traj_samples=100, noise=0., shuffle=True, check=False, H_val=None, L_val=None, phi0_val=None,exclude_values=[], val_lower=None, val_higher = None):
 
     # t = np.cumsum(rng.exponential(scale=10., size=(batch_size, traj_samples)), axis=-1)
@@ -80,7 +78,7 @@ def orbits_train_gen(batch_size, traj_samples=100, noise=0., shuffle=True, check
             else:
                 H = -mu / 2 * (0.5 + 0.5 * rng.uniform(size=(batch_size, 1)))
         else: 
-            H_val * np.ones((batch_size, 1))
+            H = H_val * np.ones((batch_size, 1))
             
 
         if L_val is None: #angular momentum
@@ -95,6 +93,19 @@ def orbits_train_gen(batch_size, traj_samples=100, noise=0., shuffle=True, check
         a = -mu / (2 * H)  # semi-major axis
         e = np.sqrt(1 - L ** 2 / (mu * a)) #eccentricity?
 
+        """
+            y target indices correspond to:
+
+            0 = e = eccentricity
+            1 = a = semimajor axis
+
+
+            most relevant
+            2 = phi0 = orientation of the orbit
+            3 = H = energy
+            4 = L = angular momentum
+        """
+
         if phi0_val is None:
             if "phi0" in exclude_values:
                 phi0 = 2 * np.pi * excluded_uniform_distribution(val_lower,val_higher,batch_size)
@@ -104,18 +115,6 @@ def orbits_train_gen(batch_size, traj_samples=100, noise=0., shuffle=True, check
             phi0 = phi0_val * np.ones((batch_size, 1))
             #phi0 standard value = np.pi
         
-        """
-            y target indices correspond to:
-            0 = e = eccentricity
-            1 = a = semimajor axis
-            most relevant
-            2 = phi0 = orientation of the orbit
-            3 = H = energy
-            4 = L = angular momentum
-        """
-        # print(H,L,phi0)
-        # print(H.shape, L.shape)
-
         # https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
         T = 2 * np.pi * np.sqrt(a ** 3 / mu)  # period
         M = np.fmod(2 * np.pi * t / T, 2 * np.pi)  # mean anomaly
@@ -213,24 +212,47 @@ class OrbitsDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.size
 
+class OrbitsDataset_NF_train(torch.utils.data.Dataset):
+    def __init__(self, noise = 0.1, check=False, num_samples = 1024, transform=None, phi0 = None, H = None, L = None):
+        """
+        phi0: 
+        """
+        self.transform = transform
+        self.size = num_samples
+        start = time.time()
+        
+        self.params = []
+        self.data = None
+        
+        p, d = orbits_train_gen(1, noise = noise, traj_samples = num_samples, check=check, phi0_val = phi0, H_val = H, L_val = L)
+        for param in p:
+            self.params.append(param[0])
+        self.data = torch.tensor(d[0]).float()
+        
+        self.params = np.concatenate(self.params, axis=0)  # e, a, phi0, H, L
+        #print(self.params)
+        #print(self.data.shape)
+        #print(f'It took {time.time() - start} time to finish the job.')
 
-if __name__ == '__main__':
-    orbits_dataset = OrbitsDataset(exclude_values=['H','phi0'],val_lower=0.25,val_higher=0.75, size=128)
-    params = orbits_dataset.params
-    data = orbits_dataset.data
-   #print(params)
-    
-    train_orbits_loader = torch.utils.data.DataLoader(
-        dataset = orbits_dataset,
-        shuffle = True,
-        batch_size = 5,
-    )
+    def __getitem__(self, idx):
+        if idx < self.size:
+            return self.data[idx]
 
-    print(len(train_orbits_loader))
-    for inp1,inp2,y in train_orbits_loader:
-        print(y[:,0:2])
-        print(len(inp1))
-        print(type(inp1[0]))
-        print(inp1)
-        break
+    def __len__(self):
+        return self.size
 
+class OrbitsDataset_NF_gen(torch.utils.data.Dataset):
+    def __init__(self, data):
+        """
+        phi0: 
+        """
+        self.size, self.dim = data.shape        
+        self.data = data
+
+
+    def __getitem__(self, idx):
+        if idx < self.size:
+            return self.data[idx]
+
+    def __len__(self):
+        return self.size

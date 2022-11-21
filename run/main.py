@@ -10,6 +10,8 @@ sys.path.append('./') # now can access entire repository, (important when runnin
 
 from models import branch, predictor
 
+
+
 from ldcl.tools.seed import set_deterministic
 from ldcl.optimizers.lr_scheduler import LR_Scheduler
 from ldcl.data import neworbits, versatileorbits, staticorbits
@@ -18,8 +20,7 @@ from ldcl.tools.device import get_device
 
 device = get_device()
 
-
-SCRIPT_PATH = "../experiments/"
+SCRIPT_PATH = "run/"
 
 saved_epochs = list(range(20)) + [20,40,60,80]
 
@@ -120,3 +121,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     training_loop(args)
+
+
+
+
+
+
+
