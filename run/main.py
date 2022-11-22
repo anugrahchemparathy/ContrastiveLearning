@@ -20,7 +20,8 @@ from ldcl.tools.device import get_device
 
 device = get_device()
 
-SCRIPT_PATH = "run/"
+import pathlib
+SCRIPT_PATH = pathlib.Path(__file__).parent.resolve().as_posix() + "/" # always get this directory
 
 saved_epochs = list(range(20)) + [20,40,60,80]
 
