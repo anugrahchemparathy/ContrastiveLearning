@@ -4,8 +4,8 @@ import torch.nn as nn
 
 import os
 import argparse
-import sys
-sys.path.append('./') # now can access entire repository, (important when running locally)
+# import sys
+# sys.path.append('./') # now can access entire repository, (important when running locally)
 
 
 from models import branch, predictor
@@ -43,7 +43,7 @@ def training_loop(args):
 
 
     encoder = branch.branchEncoder(encoder_out=3)
-    model_type = "3Dorbits_rmseNCE/"
+    model_type = "3Dorbits_abcd_rmseNCE/"
     save_progress_path = SCRIPT_PATH + "saved_models/" + model_type
     os.mkdir(save_progress_path)
 
