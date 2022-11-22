@@ -1,1 +1,0 @@
-NF_orbits.py - variation of orbit dataset used in training normalizing flows on a fixed orbit (renamed recently - used to be named versatileorbits.py)
