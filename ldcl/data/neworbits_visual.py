@@ -84,7 +84,9 @@ def orbits_train_gen(batch_size, traj_samples=10, noise=0., shuffle=True, check=
 class OrbitsDataset(torch.utils.data.Dataset):
     def __init__(self, size=10240, check=False, gen_batch=128, transform=None, ts_image = 3, image_samples = 10):
         self.image_samples = image_samples
-        
+        self.traj_samples = 10
+
+
         self.transform = transform
         self.size = size
         start = time.time()
@@ -92,7 +94,7 @@ class OrbitsDataset(torch.utils.data.Dataset):
         self.params = [[], [], [], [], []]
         self.data = []
         for _ in range(num_batch):
-            p, d = orbits_train_gen(gen_batch, check=check, ts_image = ts_image, image_samples = image_samples)
+            p, d = orbits_train_gen(gen_batch, check=check, traj_samples=self.traj_samples, ts_image = ts_image, image_samples = image_samples)
             for i in range(len(self.params)):
                 self.params[i].append(p[i])
             self.data.append(d)
@@ -103,14 +105,13 @@ class OrbitsDataset(torch.utils.data.Dataset):
         print(f'It took {time.time() - start} time to finish the job.')
         print(self.data.shape)
         
-    def __getitem__(self, idx):
+    def __getitem__(self, idx): # return two views of a specific element in [0, ..., batch_size - 1]
         if idx < self.size:
             x_data = self.data[idx]
-            random_x_rows = np.random.randint(0, x_data.shape[0] // self.image_samples, 2)
+            x_1, x_2 = np.random.randint(0, self.traj_samples,2)
 
-            x_output = x_data[random_x_rows]
-            x_view1 = x_output[0]
-            x_view2 = x_output[1]
+            x_view1 = x_data[[x_1 + i for i in range(10)]]
+            x_view2 = x_data[[x_2 + i for i in range(10)]]
 
             # [input = [x1, x2, p1, p2]?, target = [e, a, phi0, H, L]
             """
