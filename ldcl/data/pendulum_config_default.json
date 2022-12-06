@@ -4,9 +4,9 @@
     "use_cached_data": "True",
     "verbose": "True",
     "pendulum_settings": {
-        "num_energies": 5120,
+        "num_trajs": 5120,
         "num_ts": 10,
-        "energy_distr": {
+        "traj_distr": {
             "type": "uniform",
             "dims": 1,
             "min": 0,
@@ -29,6 +29,6 @@
         "bob_size": 1,
         "continuous": "False",
         "crop": 1,
-        "crop_c": "[-1, -1]"
+        "crop_c": "-1, -1"
     }
 }
