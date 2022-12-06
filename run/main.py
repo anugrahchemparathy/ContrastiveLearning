@@ -14,7 +14,7 @@ from models import branch, predictor
 
 from ldcl.tools.seed import set_deterministic
 from ldcl.optimizers.lr_scheduler import LR_Scheduler
-from ldcl.data import neworbits, versatileorbits, staticorbits
+from ldcl.data import physics, neworbits
 from ldcl.losses.nce import infoNCE, rmseNCE, normalmseNCE
 from ldcl.tools.device import get_device
 
@@ -34,7 +34,10 @@ def training_loop(args):
     """
     # dataloader_kwargs = dict(drop_last=True, pin_memory=True, num_workers=16)
     dataloader_kwargs = {}
-    train_orbits_dataset = neworbits.OrbitsDataset()
+    train_orbits_dataset, folder = physics.get_dataset("orbit_config_default.json", "../saved_datasets")
+    print(f"Using dataset {folder}...")
+    #train_orbits_dataset = neworbits.OrbitsDataset()
+
     train_orbits_loader = torch.utils.data.DataLoader(
         dataset = train_orbits_dataset,
         shuffle = True,
@@ -44,7 +47,7 @@ def training_loop(args):
 
 
     encoder = branch.branchEncoder(encoder_out=3)
-    model_type = "3Dorbits_infoNCE/"
+    model_type = "3Dorbits_rsmeNCE/"
     save_progress_path = SCRIPT_PATH + "saved_models/" + model_type
     os.mkdir(save_progress_path)
 
@@ -85,7 +88,7 @@ def training_loop(args):
             # z2 = get_z(input2.cuda())
             z1 = get_z(input1)
             z2 = get_z(input2)
-            loss = apply_loss(z1, z2, infoNCE)
+            loss = apply_loss(z1, z2, rmseNCE)
 
             # optimization step
             loss.backward()
@@ -120,7 +123,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     training_loop(args)
-
 
 
 
