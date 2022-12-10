@@ -9,6 +9,7 @@ from scipy.special import ellipj
 import time
 import glob
 import os
+from pathlib import Path
 import shutil
 
 import matplotlib.pyplot as plt
@@ -396,19 +397,20 @@ def get_dataset(config, saved_dir):
     """
     if isinstance(config, str):
         config = read_config(config)
+    #print(saved_dir)
 
     # If cache, check if exists
     bundle = None
     if config.use_cached_data:
         for other_file in glob.glob(saved_dir + "/*/config.json"):
             if json.dumps(read_config(other_file)) == json.dumps(config):
-                other_file = other_file[:other_file.rindex("/")]       
-                folder_name = other_file[other_file.rindex("/") + 1:]
+                p = Path(other_file)
+                other_file = p.parents[0]
+                folder_name = str(os.path.join(other_file, ''))
                 
                 bundle = {}
-                for npfile in glob.glob(other_file + "/*.npy"):
-                    name = npfile[:npfile.rindex(".")]
-                    name = name[name.rindex("/") + 1:]
+                for npfile in glob.glob(os.path.join(other_file, "*.npy")):
+                    name = Path(npfile).with_suffix('').name
                     bundle[name] = np.load(npfile)
 
     # Generate data
@@ -444,7 +446,7 @@ def get_dataset(config, saved_dir):
 
         with open(folder_name + "/config.json", "w") as f:
             json.dump(config, f)
-
+    
     dataset = ConservationDataset(bundle)
 
     return dataset, folder_name
