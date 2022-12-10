@@ -120,12 +120,11 @@ if __name__ == '__main__':
     parser.add_argument('--wd', default=0.001, type=float)
     parser.add_argument('--warmup_epochs', default=5, type=int)
     parser.add_argument('--fine_tune', default=False, type=bool)
+    parser.add_argument('--projhead', default=False, type=bool)
+    parser.add_argument('--fname', type = str, required = True)
 
     args = parser.parse_args()
-    training_loop(args)
-
-
-
-
+    print(args.projhead)
+    #training_loop(args)
 
 

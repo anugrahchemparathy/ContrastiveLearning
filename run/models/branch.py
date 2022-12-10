@@ -25,3 +25,21 @@ class branchEncoder(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
+# projectionHead
+# implementing the projection head described in simclr paper
+
+class projectionHead(nn.Module):
+    def __init__(self, head_size = 4, hidden_size = 64):
+        super().__init__()
+
+        layers = [
+            nn.Linear(head_size, hidden_size),
+            nn.ReLU(inplace = True),
+            nn.Linear(hidden_size, head_size)
+        ]
+
+        self.head = nn.Sequential(*layers)
+    
+    def forward(self, x):
+        return self.head(x)
