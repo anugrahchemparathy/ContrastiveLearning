@@ -16,6 +16,7 @@ from ldcl.tools.seed import set_deterministic
 from ldcl.optimizers.lr_scheduler import LR_Scheduler
 from ldcl.data import physics, neworbits
 from ldcl.losses.nce import infoNCE, rmseNCE, normalmseNCE
+from ldcl.losses.simclr import NT_Xent_loss
 from ldcl.tools.device import get_device
 
 device = get_device()
@@ -47,8 +48,9 @@ def training_loop(args):
 
 
     encoder = branch.branchEncoder(encoder_out=3)
-    model_type = "3Dorbits_rsmeNCE/"
-    save_progress_path = SCRIPT_PATH + "saved_models/" + model_type
+    proj_head = branch.projectionHead(head_size=3)
+    #model_type = "3Dorbits_rsmeNCE/"
+    save_progress_path = os.path.join(SCRIPT_PATH, "saved_models", args.fname)
     os.mkdir(save_progress_path)
 
     custom_parameters = [{
@@ -88,7 +90,11 @@ def training_loop(args):
             # z2 = get_z(input2.cuda())
             z1 = get_z(input1)
             z2 = get_z(input2)
-            loss = apply_loss(z1, z2, rmseNCE)
+            if args.projhead:
+                z1 = proj_head(z1)
+                z2 = proj_head(z2)
+
+            loss = apply_loss(z1, z2, NT_Xent_loss)
 
             # optimization step
             loss.backward()
@@ -99,10 +105,10 @@ def training_loop(args):
         print("epoch" + str(e) + "    loss = " + str(loss))
 
         if e in saved_epochs:
-            torch.save(encoder, save_progress_path + str(e) + '_encoder.pt')
+            torch.save(encoder, os.path.join(save_progress_path,f'{e}_encoder.pt'))
 
 
-    torch.save(encoder, save_progress_path + 'final_encoder.pt')
+    torch.save(encoder, os.path.join(save_progress_path, 'final_encoder.pt'))
 
     
     
@@ -124,7 +130,7 @@ if __name__ == '__main__':
     parser.add_argument('--fname', type = str, required = True)
 
     args = parser.parse_args()
-    print(args.projhead)
-    #training_loop(args)
+    #print(args.projhead)
+    training_loop(args)
 
 
