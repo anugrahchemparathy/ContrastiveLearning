@@ -8,11 +8,22 @@
         "num_trajs": 10240,
         "num_ts": 100,
         "traj_distr": {
-            "type": "uniform_with_intervals",
-            "dims": 3,
-            "mode": "explicit",
-            "combine": "all",
-            "intervals": "[[0.0,1.0]], [[0.0,0.33],[0.67,1.00]], [[0.0,2.09],[4.19,6.28]]"
+            "type": "stack",
+            "dists": [
+                {
+                    "type": "uniform",
+                    "dims": 1,
+                    "min": 0,
+                    "max": 1
+                }, {
+                    "type": "uniform_with_intervals",
+                    "dims": 2,
+                    "mode": "explicit",
+                    "combine": "all",
+                    "intervals": "[[0.0,0.33],[0.67,1.00]], [[0.0,2.09],[4.19,6.28]]"
+                }
+            ],
+            "reorder_axes": "None"
         },
         "t_distr": {
             "type": "uniform",

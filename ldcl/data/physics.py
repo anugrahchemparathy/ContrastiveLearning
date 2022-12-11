@@ -41,6 +41,9 @@ def read_config(f):
                 d[key] = eval("[" + d[key] + "]")
             elif isinstance(value, dict):
                 convert_keys(value)
+            elif isinstance(value, list) and all([isinstance(x, dict) for x in value]):
+                for i, x in enumerate(value):
+                    convert_keys(x)
 
     convert_keys(x)
 
@@ -80,6 +83,8 @@ def sample_distribution(dist, num):
         elif dist.mode == "explicit": # explicitly described gaps
             for k in range(dist.dims):
                 intervals.append(np.array(dist.intervals[k]))
+        else:
+            raise ValueError("dist interval specification unrecognized")
 
         final = np.zeros((0, dist.dims))
         while np.shape(final)[0] < num:
@@ -90,19 +95,19 @@ def sample_distribution(dist, num):
                 is_interval.append(np.logical_and(ret[-1][:, np.newaxis] > intervals[k][np.newaxis, :, 0], ret[-1][:, np.newaxis] < intervals[k][np.newaxis, :, 1]))
                 is_interval[k] = np.any(is_interval[k], axis=1)
             is_interval = np.array(is_interval)
-            print(is_interval[:, :100])
 
             if dist.dims == 1 or dist.combine == "all":
                 is_interval = np.all(is_interval, axis=0)
             elif dist.combine == "any":
                 is_interval = np.any(is_interval, axis=0)
+            else:
+                raise ValueError("dist.combine unrecognized")
 
             ret = np.swapaxes(np.array(ret), 0, 1)
             ret = ret[is_interval]
 
             final = np.concatenate((final, ret))
         final = final[:num]
-        print(final.shape)
 
         if dist.dims == 1:
             dist.intervals = dist.intervals[0]
@@ -113,6 +118,20 @@ def sample_distribution(dist, num):
             return dist.shift + rng.exponential(dist.scale, size=num)
         else:
             raise NotImplementedError
+    elif dist.type == "stack":
+        ret = []
+        for smalld in dist.dists:
+            ret.append(sample_distribution(smalld, num))
+            if len(ret[-1].shape) == 1:
+                ret[-1] = ret[-1][:, np.newaxis]
+
+        print([x.shape for x in ret])
+        ret = np.concatenate(ret, axis=1)
+
+        if dist.reorder_axes != None:
+            ret = np.transpose(ret, dist.reorder_axes)
+
+        return ret
     else:
         raise NotImplementedError # implement other kinds of distributions
 

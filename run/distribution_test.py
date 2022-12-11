@@ -13,5 +13,7 @@ loader = torch.utils.data.DataLoader(
 )
 
 for data in loader:
-    plt.scatter(data[2]["phi0"], data[2]["L"], s=0.1)
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.scatter(data[2]["phi0"], data[2]["L"], data[2]["H"], s=0.3)
     plt.show()
