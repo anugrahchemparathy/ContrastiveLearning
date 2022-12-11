@@ -106,9 +106,11 @@ def training_loop(args):
 
         if e in saved_epochs:
             torch.save(encoder, os.path.join(save_progress_path,f'{e}_encoder.pt'))
+            torch.save(encoder, os.path.join(save_progress_path,f'{e}_projector.pt'))
 
 
     torch.save(encoder, os.path.join(save_progress_path, 'final_encoder.pt'))
+    torch.save(encoder, os.path.join(save_progress_path, 'final_projector.pt'))
 
     
     
@@ -126,8 +128,9 @@ if __name__ == '__main__':
     parser.add_argument('--wd', default=0.001, type=float)
     parser.add_argument('--warmup_epochs', default=5, type=int)
     parser.add_argument('--fine_tune', default=False, type=bool)
-    parser.add_argument('--projhead', default=False, type=bool)
-    parser.add_argument('--fname', type = str, required = True)
+    parser.add_argument('--projhead', default=True, type=bool)
+    # parser.add_argument('--fname', default='default_model' , type = str)
+    parser.add_argument('--fname', default='simclr_infoNCE_1hidden_head_4dim' , type = str)
 
     args = parser.parse_args()
     #print(args.projhead)
