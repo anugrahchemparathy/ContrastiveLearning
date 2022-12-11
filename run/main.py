@@ -37,7 +37,6 @@ def training_loop(args):
     dataloader_kwargs = {}
     train_orbits_dataset, folder = physics.get_dataset("orbit_config_default.json", "../saved_datasets")
     print(f"Using dataset {folder}...")
-    #train_orbits_dataset = neworbits.OrbitsDataset()
 
     train_orbits_loader = torch.utils.data.DataLoader(
         dataset = train_orbits_dataset,
@@ -46,12 +45,16 @@ def training_loop(args):
         **dataloader_kwargs
     )
 
+    save_progress_path = os.path.join(SCRIPT_PATH, "saved_models", args.fname)
+    os.mkdir(save_progress_path)
+
 
     encoder = branch.branchEncoder(encoder_out=4)
     proj_head = branch.projectionHead(head_size=4)
-    #model_type = "3Dorbits_rsmeNCE/"
-    save_progress_path = os.path.join(SCRIPT_PATH, "saved_models", args.fname)
-    os.mkdir(save_progress_path)
+    torch.save(encoder, os.path.join(save_progress_path, 'start_encoder.pt'))
+    if args.projhead:
+        torch.save(proj_head, os.path.join(save_progress_path, 'start_projector.pt'))
+
 
     custom_parameters = [{
             'name': 'base',
@@ -72,7 +75,9 @@ def training_loop(args):
 
     # helpers
     def get_z(x):
-        return encoder(x.float())
+        out = encoder(x.float())
+        if args.projhead: out = proj_head(out)
+        return out
     def apply_loss(z1, z2, loss_func = normalmseNCE):
         loss = 0.5 * loss_func(z1, z2) + 0.5 * loss_func(z2, z1)
         return loss
@@ -84,17 +89,15 @@ def training_loop(args):
 
         for it, (input1, input2, y) in enumerate(train_orbits_loader):
             encoder.zero_grad()
+            if args.projhead: proj_head.zero_grad()
 
             # forward pass
             # z1 = get_z(input1.cuda())
             # z2 = get_z(input2.cuda())
             z1 = get_z(input1)
             z2 = get_z(input2)
-            if args.projhead:
-                z1 = proj_head(z1)
-                z2 = proj_head(z2)
 
-            loss = apply_loss(z1, z2, infoNCE)
+            loss = apply_loss(z1, z2, rmseNCE)
 
             # optimization step
             loss.backward()
@@ -106,11 +109,13 @@ def training_loop(args):
 
         if e in saved_epochs:
             torch.save(encoder, os.path.join(save_progress_path,f'{e}_encoder.pt'))
-            torch.save(encoder, os.path.join(save_progress_path,f'{e}_projector.pt'))
+            if args.projhead:
+                torch.save(proj_head, os.path.join(save_progress_path,f'{e}_projector.pt'))
 
 
     torch.save(encoder, os.path.join(save_progress_path, 'final_encoder.pt'))
-    torch.save(encoder, os.path.join(save_progress_path, 'final_projector.pt'))
+    if args.projhead:
+        torch.save(proj_head, os.path.join(save_progress_path, 'final_projector.pt'))
 
     
     
@@ -128,9 +133,10 @@ if __name__ == '__main__':
     parser.add_argument('--wd', default=0.001, type=float)
     parser.add_argument('--warmup_epochs', default=5, type=int)
     parser.add_argument('--fine_tune', default=False, type=bool)
-    parser.add_argument('--projhead', default=True, type=bool)
+    parser.add_argument('--projhead', default=False, type=bool)
     # parser.add_argument('--fname', default='default_model' , type = str)
-    parser.add_argument('--fname', default='simclr_infoNCE_1hidden_head_4dim' , type = str)
+    # parser.add_argument('--fname', default='simclr_infoNCE_1hidden_head_4dim' , type = str)
+    parser.add_argument('--fname', default='rmseNCE_3D' , type = str)
 
     args = parser.parse_args()
     #print(args.projhead)

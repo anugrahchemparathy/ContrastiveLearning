@@ -53,7 +53,7 @@ def sample_distribution(dist, num):
     if dist.type == "uniform":
         ret = []
 
-        if dist.dims == 1 and type(dist.max) == int:
+        if dist.dims == 1:
             dist.max = [dist.max]
             dist.min = [dist.min]
 
