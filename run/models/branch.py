@@ -36,6 +36,8 @@ class projectionHead(nn.Module):
         layers = [
             nn.Linear(head_size, hidden_size),
             nn.ReLU(inplace = True),
+            #nn.Linear(hidden_size, hidden_size),
+            #nn.ReLU(inplace = True),
             nn.Linear(hidden_size, head_size)
         ]
 

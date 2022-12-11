@@ -16,7 +16,7 @@ from ldcl.tools.seed import set_deterministic
 from ldcl.optimizers.lr_scheduler import LR_Scheduler
 from ldcl.data import physics, neworbits
 from ldcl.losses.nce import infoNCE, rmseNCE, normalmseNCE
-from ldcl.losses.simclr import NT_Xent_loss
+from ldcl.losses.simclr import NT_Xent_loss, infoNCE
 from ldcl.tools.device import get_device
 
 device = get_device()
@@ -47,8 +47,8 @@ def training_loop(args):
     )
 
 
-    encoder = branch.branchEncoder(encoder_out=3)
-    proj_head = branch.projectionHead(head_size=3)
+    encoder = branch.branchEncoder(encoder_out=4)
+    proj_head = branch.projectionHead(head_size=4)
     #model_type = "3Dorbits_rsmeNCE/"
     save_progress_path = os.path.join(SCRIPT_PATH, "saved_models", args.fname)
     os.mkdir(save_progress_path)
@@ -94,7 +94,7 @@ def training_loop(args):
                 z1 = proj_head(z1)
                 z2 = proj_head(z2)
 
-            loss = apply_loss(z1, z2, NT_Xent_loss)
+            loss = apply_loss(z1, z2, infoNCE)
 
             # optimization step
             loss.backward()

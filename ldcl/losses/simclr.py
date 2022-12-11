@@ -39,7 +39,7 @@ def infoNCE(nn, p, temperature=0.1):
     logits = nn @ p.T
     logits /= temperature
     n = p.shape[0]
-    labels = torch.arange(0, n, dtype=torch.long).cuda()
+    labels = torch.arange(0, n, dtype=torch.long)#.cuda()
     loss = torch.nn.functional.cross_entropy(logits, labels)
     return loss
 
