@@ -34,26 +34,37 @@ def training_loop(args):
     num_workers: multiprocess data loading
     """
     # dataloader_kwargs = dict(drop_last=True, pin_memory=True, num_workers=16)
-    dataloader_kwargs = {}
-    train_orbits_dataset, folder = physics.get_dataset("orbit_config_default.json", "../saved_datasets")
-    print(f"Using dataset {folder}...")
+    # dataloader_kwargs = {}
+    # train_orbits_dataset, folder = physics.get_dataset("orbit_config_default.json", "../saved_datasets")
+    # print(f"Using dataset {folder}...")
 
+
+    # train_orbits_loader = torch.utils.data.DataLoader(
+    #     dataset = train_orbits_dataset,
+    #     shuffle = True,
+    #     batch_size = args.bsz,
+    #     **dataloader_kwargs
+    # )
+
+
+
+    orbits_dataset = neworbits.OrbitsDataset()
     train_orbits_loader = torch.utils.data.DataLoader(
-        dataset = train_orbits_dataset,
+        dataset = orbits_dataset,
         shuffle = True,
         batch_size = args.bsz,
-        **dataloader_kwargs
     )
+
 
     save_progress_path = os.path.join(SCRIPT_PATH, "saved_models", args.fname)
     os.mkdir(save_progress_path)
 
 
-    encoder = branch.branchEncoder(encoder_out=4)
-    proj_head = branch.projectionHead(head_size=4)
+    encoder = branch.branchEncoder(encoder_out=3)
+    # proj_head = branch.projectionHead(head_size=4)
     torch.save(encoder, os.path.join(save_progress_path, 'start_encoder.pt'))
-    if args.projhead:
-        torch.save(proj_head, os.path.join(save_progress_path, 'start_projector.pt'))
+    # if args.projhead:
+    #     torch.save(proj_head, os.path.join(save_progress_path, 'start_projector.pt'))
 
 
     custom_parameters = [{
@@ -76,7 +87,7 @@ def training_loop(args):
     # helpers
     def get_z(x):
         out = encoder(x.float())
-        if args.projhead: out = proj_head(out)
+        # if args.projhead: out = proj_head(out)
         return out
     def apply_loss(z1, z2, loss_func = normalmseNCE):
         loss = 0.5 * loss_func(z1, z2) + 0.5 * loss_func(z2, z1)
@@ -89,7 +100,7 @@ def training_loop(args):
 
         for it, (input1, input2, y) in enumerate(train_orbits_loader):
             encoder.zero_grad()
-            if args.projhead: proj_head.zero_grad()
+            # if args.projhead: proj_head.zero_grad()
 
             # forward pass
             # z1 = get_z(input1.cuda())
@@ -109,13 +120,13 @@ def training_loop(args):
 
         if e in saved_epochs:
             torch.save(encoder, os.path.join(save_progress_path,f'{e}_encoder.pt'))
-            if args.projhead:
-                torch.save(proj_head, os.path.join(save_progress_path,f'{e}_projector.pt'))
+            # if args.projhead:
+            #     torch.save(proj_head, os.path.join(save_progress_path,f'{e}_projector.pt'))
 
 
     torch.save(encoder, os.path.join(save_progress_path, 'final_encoder.pt'))
-    if args.projhead:
-        torch.save(proj_head, os.path.join(save_progress_path, 'final_projector.pt'))
+    # if args.projhead:
+    #     torch.save(proj_head, os.path.join(save_progress_path, 'final_projector.pt'))
 
     
     

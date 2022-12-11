@@ -5,10 +5,10 @@ import torch
 import torch.nn as nn
 import time
 
-rng = np.random.default_rng(8)  # manually seed random number generator
+rng = np.random.default_rng(10)  # manually seed random number generator
 from scipy.special import ellipj
 
-MAX_ITERATIONS = 10000
+MAX_ITERATIONS = 1000
 
 
 def eccentric_anomaly_from_mean(e, M, tol=1e-14):
@@ -40,33 +40,32 @@ def eccentric_anomaly_from_mean(e, M, tol=1e-14):
 
 
 def orbits_train_gen(batch_size, traj_samples=100, noise=0., shuffle=True, check=False, H=None, L=None, phi0=None):
-    mu = 1.  # standard gravitational parameter, i.e. G*M
     E = None
     while E is None:
-        #print('batch size =', batch_size, ' traj_samples =', traj_samples)
-        # randomly sampled observation times
-        t = rng.uniform(0, 10. * traj_samples, size=(batch_size, traj_samples))
-        # t = np.cumsum(rng.exponential(scale=10., size=(batch_size, traj_samples)), axis=-1)
-
-        H = -mu / 2 * (0.5 + 0.5 * rng.uniform(size=(batch_size, 1))) if H is None else H * np.ones((batch_size, 1))
-        L = rng.uniform(size=(batch_size, 1)) if L is None else L * np.ones((batch_size, 1))
-
-        a = -mu / (2 * H)  # semi-major axis
-        e = np.sqrt(1 - L ** 2 / (mu * a))
-
-        #print('eshape =', e.shape)
-        #print('tshape =', t.shape)
-
-        phi0 = 2 * np.pi * rng.uniform(size=(batch_size, 1)) if phi0 is None else phi0 * np.ones((batch_size, 1))
-
-        # https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
-        T = 2 * np.pi * np.sqrt(a ** 3 / mu)  # period
-        M = np.fmod(2 * np.pi * t / T, 2 * np.pi)  # mean anomaly
-        
         try:
+            #print('batch size =', batch_size, ' traj_samples =', traj_samples)
+            # randomly sampled observation times
+            t = rng.uniform(0, 10. * traj_samples, size=(batch_size, traj_samples))
+            # t = np.cumsum(rng.exponential(scale=10., size=(batch_size, traj_samples)), axis=-1)
+
+            mu = 1.  # standard gravitational parameter, i.e. G*M
+
+            H = -mu / 2 * (0.5 + 0.5 * rng.uniform(size=(batch_size, 1))) if H is None else H * np.ones((batch_size, 1))
+            L = rng.uniform(size=(batch_size, 1)) if L is None else L * np.ones((batch_size, 1))
+
+            a = -mu / (2 * H)  # semi-major axis
+            e = np.sqrt(1 - L ** 2 / (mu * a))
+
+            #print('eshape =', e.shape)
+            #print('tshape =', t.shape)
+
+            phi0 = 2 * np.pi * rng.uniform(size=(batch_size, 1)) if phi0 is None else phi0 * np.ones((batch_size, 1))
+
+            # https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
+            T = 2 * np.pi * np.sqrt(a ** 3 / mu)  # period
+            M = np.fmod(2 * np.pi * t / T, 2 * np.pi)  # mean anomaly
             E = eccentric_anomaly_from_mean(e, M)  # eccentric anomaly
         except:
-            print("data generation failed.")
             pass
     phi = 2 * np.arctan2(np.sqrt(1 + e) * np.sin(E / 2), np.sqrt(1 - e) * np.cos(E / 2))  # true anomaly/angle
     r = (a * (1 - e ** 2)) / (1 + e * np.cos(phi))  # radius
@@ -152,7 +151,7 @@ if __name__ == '__main__':
     orbits_dataset = OrbitsDataset()
     params = orbits_dataset.params
     data = orbits_dataset.data
-    
+
     train_orbits_loader = torch.utils.data.DataLoader(
         dataset = orbits_dataset,
         shuffle = True,
@@ -164,4 +163,3 @@ if __name__ == '__main__':
         print(len(inp1))
         print(type(inp1[0]))
         break
-
