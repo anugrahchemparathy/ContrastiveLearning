@@ -38,9 +38,7 @@ def read_config(f):
             if value in ["None", "True", "False"]:
                 d[key] = eval(d[key])
             elif isinstance(value, str) and "," in value:
-                d[key] = value.split(",")
-                for idx, v in enumerate(d[key]):
-                    d[key][idx] = float(v)
+                d[key] = eval("[" + d[key] + "]")
             elif isinstance(value, dict):
                 convert_keys(value)
 
@@ -70,23 +68,46 @@ def sample_distribution(dist, num):
         # i.e. if some intervals are longer than other intervals,
         # they will be more likely.
 
+        intervals = []
         if dist.dims == 1:
-            if dist.mode == "even_space": # evenly spaced gaps
-                intervals = [[(2 * i) / (2 * dist.intervals - 1), (2 * i + 1) / (2 * dist.intervals - 1)] for i in range(0, dist.intervals)]
-                intervals = np.array(intervals)
-                intervals = intervals * (dist.max - dist.min) + dist.min
-            elif dist.mode == "explicit": # explicitly described gaps
-                intervals = np.array(dist.intervals)
+            dist.intervals = [dist.intervals]
 
-            sizes = np.cumsum(intervals[:, 1] - intervals[:, 0])
-            ret = rng.uniform(0, sizes[-1], size=num)
+        if dist.mode == "even_space": # evenly spaced gaps
+            for k in range(dist.dims):
+                intervals.append([[(2 * i) / (2 * dist.intervals[k] - 1), (2 * i + 1) / (2 * dist.intervals[k] - 1)] for i in range(0, dist.intervals[k])])
+                intervals[k] = np.array(intervals[k])
+                intervals[k] = intervals[k] * (dist.max[k] - dist.min[k]) + dist.min[k]
+        elif dist.mode == "explicit": # explicitly described gaps
+            for k in range(dist.dims):
+                intervals.append(np.array(dist.intervals[k]))
 
-            whichgap = np.searchsorted(sizes, ret)
-            indent = (intervals[:, 0] - np.concatenate(([0], sizes[:-1])))[whichgap]
-            
-            return ret + indent
-        else:
-            raise NotImplementedError
+        final = np.zeros((0, dist.dims))
+        while np.shape(final)[0] < num:
+            is_interval = []
+            ret = []
+            for k in range(dist.dims):
+                ret.append(rng.uniform(np.min(intervals[k]), np.max(intervals[k]), size=num - np.shape(final)[0]))
+                is_interval.append(np.logical_and(ret[-1][:, np.newaxis] > intervals[k][np.newaxis, :, 0], ret[-1][:, np.newaxis] < intervals[k][np.newaxis, :, 1]))
+                is_interval[k] = np.any(is_interval[k], axis=1)
+            is_interval = np.array(is_interval)
+            print(is_interval[:, :100])
+
+            if dist.dims == 1 or dist.combine == "all":
+                is_interval = np.all(is_interval, axis=0)
+            elif dist.combine == "any":
+                is_interval = np.any(is_interval, axis=0)
+
+            ret = np.swapaxes(np.array(ret), 0, 1)
+            ret = ret[is_interval]
+
+            final = np.concatenate((final, ret))
+        final = final[:num]
+        print(final.shape)
+
+        if dist.dims == 1:
+            dist.intervals = dist.intervals[0]
+
+        return final
     elif dist.type == "exponential":
         if dist.dims == 1:
             return dist.shift + rng.exponential(dist.scale, size=num)
@@ -453,19 +474,17 @@ def get_dataset(config, saved_dir):
 
 #get_dataset("orbit_config_default.json")
 
-
 # Template to test distribution generation.
 """class TestDistribution:
     def __init__(self):
-        self.type = "uniform"
+        self.type = "uniform_with_intervals"
+        self.mode = "explicit"
         self.dims = 2
-        self.min = [0,1]
-        self.max = [1,5]
+        self.intervals = [[[-1,0],[0.5,1],[2,3]], [[0,1],[2,3]]]
+        self.combine = "any"
 
 dist = TestDistribution()
-sample = sample_distribution(dist, 1000)
 
+sample = sample_distribution(dist, 100000)
 plt.scatter(sample[:, 0], sample[:, 1], s=0.1)
 plt.show()"""
-
-#np.save("temp_orbit_check", orbits_num_gen(10000)[0])
