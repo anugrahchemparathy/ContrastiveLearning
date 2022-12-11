@@ -11,10 +11,8 @@
             "type": "stack",
             "dists": [
                 {
-                    "type": "uniform",
-                    "dims": 1,
-                    "min": 0,
-                    "max": 1
+                    "type": "single",
+                    "value": 0.5
                 }, {
                     "type": "uniform_with_intervals",
                     "dims": 2,

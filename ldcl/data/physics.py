@@ -132,6 +132,8 @@ def sample_distribution(dist, num):
             ret = np.transpose(ret, dist.reorder_axes)
 
         return ret
+    elif dist.type == "single":
+        return np.array([dist.value] * num)
     else:
         raise NotImplementedError # implement other kinds of distributions
 
