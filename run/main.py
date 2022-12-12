@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 
 import os
+import shutil
 import argparse
 # import sys
 # sys.path.append('./') # now can access entire repository, (important when running locally)
@@ -33,39 +34,27 @@ def training_loop(args):
     pin_memory: speed dataloader transfer to cuda
     num_workers: multiprocess data loading
     """
+    save_progress_path = os.path.join(SCRIPT_PATH, "saved_models", args.fname)
+    os.mkdir(save_progress_path)
+
     # dataloader_kwargs = dict(drop_last=True, pin_memory=True, num_workers=16)
-    # dataloader_kwargs = {}
-    # train_orbits_dataset, folder = physics.get_dataset("orbit_config_default.json", "../saved_datasets")
-    # print(f"Using dataset {folder}...")
+    dataloader_kwargs = {}
+    data_config_file = "orbit_config_default.json"
 
-
-    # train_orbits_loader = torch.utils.data.DataLoader(
-    #     dataset = train_orbits_dataset,
-    #     shuffle = True,
-    #     batch_size = args.bsz,
-    #     **dataloader_kwargs
-    # )
-
-
-
-    orbits_dataset = neworbits.OrbitsDataset()
+    train_orbits_dataset, folder = physics.get_dataset(data_config_file, "../saved_datasets")
+    print(f"Using dataset {folder}...")
+    shutil.copy(data_config_file, os.path.join(save_progress_path, "data_config.json"))
     train_orbits_loader = torch.utils.data.DataLoader(
-        dataset = orbits_dataset,
+        dataset = train_orbits_dataset,
         shuffle = True,
         batch_size = args.bsz,
     )
 
-
-    save_progress_path = os.path.join(SCRIPT_PATH, "saved_models", args.fname)
-    os.mkdir(save_progress_path)
-
-
     encoder = branch.branchEncoder(encoder_out=3)
-    # proj_head = branch.projectionHead(head_size=4)
+    proj_head = branch.projectionHead(head_size=4)
     torch.save(encoder, os.path.join(save_progress_path, 'start_encoder.pt'))
     # if args.projhead:
     #     torch.save(proj_head, os.path.join(save_progress_path, 'start_projector.pt'))
-
 
     custom_parameters = [{
             'name': 'base',

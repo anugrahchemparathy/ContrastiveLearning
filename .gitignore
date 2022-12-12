@@ -17,3 +17,5 @@ saved_datasets/
 run/saved_models/*
 !run/saved_models/placeholder.txt
 **/*.swp
+
+run/Ignore*.ipynb

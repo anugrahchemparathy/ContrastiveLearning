@@ -49,6 +49,41 @@ def read_config(f):
 
     return DefaultMunch.fromDict(x, object())
 
+def interval_generator(dist):
+    intervals = []
+
+    if dist.mode == "even_space": # evenly spaced gaps
+        for k in range(dist.dims):
+            intervals.append([[(2 * i) / (2 * dist.intervals[k] - 1), (2 * i + 1) / (2 * dist.intervals[k] - 1)] for i in range(0, dist.intervals[k])])
+            intervals[k] = np.array(intervals[k])
+            intervals[k] = intervals[k] * (dist.max[k] - dist.min[k]) + dist.min[k]
+    elif dist.mode == "explicit": # explicitly described gaps
+        for k in range(dist.dims):
+            intervals.append(np.array(dist.intervals[k]))
+    else:
+        raise ValueError("dist interval specification unrecognized")
+
+    return intervals
+
+def in_intervals(dist, data):
+    intervals = interval_generator(dist)
+
+    data = np.transpose(data)
+
+    is_interval = []
+    for k in range(dist.dims):
+        is_interval.append(np.logical_and(data[k][:, np.newaxis] > intervals[k][np.newaxis, :, 0], data[k][:, np.newaxis] < intervals[k][np.newaxis, :, 1]))
+        is_interval[k] = np.any(is_interval[k], axis=1)
+    is_interval = np.array(is_interval)
+
+    if dist.dims == 1 or dist.combine == "all":
+        is_interval = np.all(is_interval, axis=0)
+    elif dist.combine == "any":
+        is_interval = np.any(is_interval, axis=0)
+    else:
+        raise ValueError("dist.combine unrecognized")
+    return is_interval
+
 def sample_distribution(dist, num):
     if dist.type == "uniform":
         ret = []
@@ -71,46 +106,21 @@ def sample_distribution(dist, num):
         # i.e. if some intervals are longer than other intervals,
         # they will be more likely.
 
-        intervals = []
-        if dist.dims == 1:
-            dist.intervals = [dist.intervals]
-
-        if dist.mode == "even_space": # evenly spaced gaps
-            for k in range(dist.dims):
-                intervals.append([[(2 * i) / (2 * dist.intervals[k] - 1), (2 * i + 1) / (2 * dist.intervals[k] - 1)] for i in range(0, dist.intervals[k])])
-                intervals[k] = np.array(intervals[k])
-                intervals[k] = intervals[k] * (dist.max[k] - dist.min[k]) + dist.min[k]
-        elif dist.mode == "explicit": # explicitly described gaps
-            for k in range(dist.dims):
-                intervals.append(np.array(dist.intervals[k]))
-        else:
-            raise ValueError("dist interval specification unrecognized")
+        intervals = interval_generator(dist)
 
         final = np.zeros((0, dist.dims))
         while np.shape(final)[0] < num:
-            is_interval = []
             ret = []
             for k in range(dist.dims):
                 ret.append(rng.uniform(np.min(intervals[k]), np.max(intervals[k]), size=num - np.shape(final)[0]))
-                is_interval.append(np.logical_and(ret[-1][:, np.newaxis] > intervals[k][np.newaxis, :, 0], ret[-1][:, np.newaxis] < intervals[k][np.newaxis, :, 1]))
-                is_interval[k] = np.any(is_interval[k], axis=1)
-            is_interval = np.array(is_interval)
 
-            if dist.dims == 1 or dist.combine == "all":
-                is_interval = np.all(is_interval, axis=0)
-            elif dist.combine == "any":
-                is_interval = np.any(is_interval, axis=0)
-            else:
-                raise ValueError("dist.combine unrecognized")
+            is_interval = in_intervals(dist, np.transpose(np.array(ret)))
 
             ret = np.swapaxes(np.array(ret), 0, 1)
             ret = ret[is_interval]
 
             final = np.concatenate((final, ret))
         final = final[:num]
-
-        if dist.dims == 1:
-            dist.intervals = dist.intervals[0]
 
         return final
     elif dist.type == "exponential":
@@ -125,17 +135,80 @@ def sample_distribution(dist, num):
             if len(ret[-1].shape) == 1:
                 ret[-1] = ret[-1][:, np.newaxis]
 
-        print([x.shape for x in ret])
         ret = np.concatenate(ret, axis=1)
 
         if dist.reorder_axes != None:
-            ret = np.transpose(ret, dist.reorder_axes)
+            if len(dist.reorder_axes) != ret.shape[1]:
+                raise ValueError("reorder axes not of correct length")
+            ret = ret[:, dist.reorder_axes]
 
         return ret
     elif dist.type == "single":
         return np.array([dist.value] * num)
     else:
         raise NotImplementedError # implement other kinds of distributions
+
+def is_in_distribution(config_or_dist, arr):
+    reduce_to_one = False
+    if isinstance(arr, int) or isinstance(arr, float):
+        reduce_to_one = True
+        arr = [arr]
+
+    if len(arr.shape) == 1:
+        arr = arr[:, np.newaxis]
+
+    if not isinstance(config_or_dist, str) and "dims" in vars(config_or_dist):
+        dist = config_or_dist
+    else:
+        if isinstance(config_or_dist, str):
+            config = read_config(config_or_dist)
+
+        for key, value in vars(config).items():
+            if isinstance(value, dict) and "traj_distr" in value:
+                dist = DefaultMunch.fromDict(value["traj_distr"], object())
+
+    if dist.type == "uniform":
+        if isinstance(dist.min, float) or isinstance(dist.min, int):
+            dist.min = [dist.min]
+            dist.max = [dist.max]
+
+        dist.min = np.array(dist.min)
+        dist.max = np.array(dist.max)
+        ret = np.logical_and(arr > dist.min[np.newaxis, :], arr < dist.max[np.newaxis, :])
+        ret = np.all(ret, axis=1)
+    elif dist.type == "uniform_with_intervals":
+        ret = in_intervals(dist, arr)
+    elif dist.type == "exponential":
+        if isinstance(dist.shift, float) or isinstance(dist.shift, int):
+            dist.shift = [dist.shift]
+            dist.scale = [dist.scale]
+
+        dist.shift = np.array(dist.shift)
+        dist.scale = np.array(dist.scale)
+        ret = np.all(np.logical_and(arr > dist.shift[np.newaxis, :], arr < (dist.shift[np.newaxis, :] + dist.scale[np.newaxis, :])), axis=1)
+    elif dist.type == "stack":
+        if dist.reorder_axes != None:
+            inverted = [dist.reorder_axes.index(i) for i in range(len(dist.reorder_axes))]
+            arr = arr[:, inverted]
+
+        startid = 0
+        in_dists = []
+        for smalld in dist.dists:
+            in_dists.append(is_in_distribution(smalld, arr[:, startid:startid + smalld.dims]))
+            startid += smalld.dims
+
+        ret = np.all(np.array(in_dists), axis=0)
+        #ret = np.array(in_dists)
+    elif dist.type == "single":
+        ret = np.equal(arr, np.array(dist.value)[np.newaxis, :])
+        ret = np.all(ret, axis=1)
+    else:
+        raise NotImplementedError
+
+    if reduce_to_one:
+        ret = ret[0]
+
+    return ret
 
 def pendulum_num_gen(config):
     """
@@ -325,8 +398,6 @@ def orbits_num_gen(config):
 
         #H = -mu / 2 * (0.5 + 0.5 * rng.uniform(size=(batch_size, 1))) if H is None else H * np.ones((batch_size, 1)) # samples uniformly from -1/4 to -1/2
         #L = rng.uniform(size=(batch_size, 1)) if L is None else L * np.ones((batch_size, 1))
-
-        H = -mu / 2 * (0.5 + 0.5 * H)
 
         a = -mu / (2 * H)  # semi-major axis
         e = np.sqrt(1 - L ** 2 / (mu * a))
