@@ -145,6 +145,28 @@ def sample_distribution(dist, num):
         return ret
     elif dist.type == "single":
         return np.array([dist.value] * num)
+    elif dist.type == "combine":
+        arrs = []
+
+        if sum(dist.ratio) < 0.95 or sum(dist.ratio) > 1:
+            raise ValueError("ratios must sum to 1")
+
+        for i, smalld in enumerate(dist.dists):
+            arrs.append(sample_distribution(smalld, int(num * dist.ratio[i] * 1.1)))
+        ret = np.concatenate(arrs, axis=0)
+        rng.shuffle(ret, axis=0)
+        ret = ret[:num]
+
+        return ret
+    elif dist.type == "discrete":
+        if sum(dist.ratio) != 1:
+            raise ValueError("ratios must sum to 1")
+
+        bars = np.cumsum([0] + dist.ratio[:-1])
+        random = rng.uniform(0, 1, size=num)
+        idx = np.searchsorted(bars, random)
+
+        return np.array(dist.values)[idx]
     else:
         raise NotImplementedError # implement other kinds of distributions
 
@@ -157,7 +179,7 @@ def is_in_distribution(config_or_dist, arr):
     if len(arr.shape) == 1:
         arr = arr[:, np.newaxis]
 
-    if not isinstance(config_or_dist, str) and "dims" in vars(config_or_dist):
+    if not isinstance(config_or_dist, str) and "type" in vars(config_or_dist):
         dist = config_or_dist
     else:
         if isinstance(config_or_dist, str):
@@ -194,14 +216,34 @@ def is_in_distribution(config_or_dist, arr):
         startid = 0
         in_dists = []
         for smalld in dist.dists:
-            in_dists.append(is_in_distribution(smalld, arr[:, startid:startid + smalld.dims]))
-            startid += smalld.dims
+            if smalld.type == "single":
+                if isinstance(smalld.value, int) or isinstance(smalld.value, float):
+                    smalldims = 1
+                else:
+                    smalldims = len(smalld.value)
+            else:
+                smalldims = smalld.dims
+            in_dists.append(is_in_distribution(smalld, arr[:, startid:startid + smalldims]))
+            startid += smalldims
 
         ret = np.all(np.array(in_dists), axis=0)
         #ret = np.array(in_dists)
     elif dist.type == "single":
-        ret = np.equal(arr, np.array(dist.value)[np.newaxis, :])
+        if isinstance(dist.value, int) or isinstance(dist.value, float):
+            value = np.array([dist.value])
+        else:
+            value = dist.value
+
+        ret = np.equal(arr, np.array(value)[np.newaxis, :])
         ret = np.all(ret, axis=1)
+    elif dist.type == "combine":
+        in_dists = []
+        for i, smalld in enumerate(dist.dists):
+            if dist.ratio[i] > 0.0:
+                in_dists.append(is_in_distribution(smalld, arr))
+
+        ret = np.any(in_dists, axis=0)
+        return ret
     else:
         raise NotImplementedError
 
@@ -499,7 +541,7 @@ class ConservationDataset(torch.utils.data.Dataset):
         return self.size
         
 
-def get_dataset(config, saved_dir):
+def get_dataset(config, saved_dir, return_bundle=False):
     """
         General dataset generation.
 
@@ -560,9 +602,30 @@ def get_dataset(config, saved_dir):
         with open(folder_name + "/config.json", "w") as f:
             json.dump(config, f)
     
+    if return_bundle:
+        return bundle, folder_name
+    else:
+        dataset = ConservationDataset(bundle)
+
+        return dataset, folder_name
+
+def combine_datasets(configs, ratio, save_folder):
+    arrs = []
+
+    if sum(ratio) < 0.95 or sum(ratio) > 1:
+        raise ValueError("ratios must sum to 1")
+
+    for config in configs:
+        arrs.append(get_dataset(config, save_folder, return_bundle=True)[0])
+
+    bundle = {}
+    for key in arrs[0].keys():
+        bundle[key] = np.concatenate([x[key] for x in arrs])
+
     dataset = ConservationDataset(bundle)
 
-    return dataset, folder_name
+    return dataset
+    
 
 #get_dataset("orbit_config_default.json")
 

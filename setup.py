@@ -6,5 +6,5 @@ setup(
     install_requires=[
         'importlib-metadata; python_version == "3.8"',
     ],
-    packages=['ldcl.optimizers', 'ldcl.tools', 'ldcl.losses', 'ldcl.data', 'ldcl.normalizing_flows'],
+    packages=['ldcl.optimizers', 'ldcl.tools', 'ldcl.losses', 'ldcl.data', 'ldcl.normalizing_flows', 'ldcl.models'],
 )

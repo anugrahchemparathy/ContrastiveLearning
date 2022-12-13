@@ -3,7 +3,7 @@ import torch
 
 import matplotlib.pyplot as plt
 
-train_orbits_dataset, folder = physics.get_dataset("cross_shape_test.json", "../saved_datasets")
+train_orbits_dataset, folder = physics.get_dataset("eight_mini_cubes.json", "../saved_datasets")
 print(f"Using dataset {folder}...")
 
 loader = torch.utils.data.DataLoader(

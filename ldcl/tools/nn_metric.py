@@ -1,6 +1,7 @@
 from sklearn.neighbors import NearestNeighbors
 from math import pi, ceil
 import numpy as np
+import copy
 
 class Orbit_Evaluator():
     """
@@ -13,6 +14,10 @@ class Orbit_Evaluator():
         expects conserved quantities as list of length 3 of (n,) np arrays conserved quantities to test for
         expects in order phi_0, energy, angular momentum
         """
+        # Protect these two from getting overwritten
+        encodings = copy.deepcopy(encodings)
+        conserved_quantities = copy.deepcopy(conserved_quantities)
+        
         self.encodings = encodings
         self.size = encodings.shape[0]
         for i,a in enumerate(conserved_quantities):
@@ -52,12 +57,12 @@ class Orbit_Evaluator():
             
             predicted = neigh.kneighbors(test, n_neighbors = 1, return_distance = False).flatten() # gets the index of the nearest neighbor to each of the test points as a (len(test),) np array
             
-            for i, (X,Y) in enumerate(vals):
+            for j, (X,Y) in enumerate(vals):
                 diff = np.abs(X[predicted] - Y)
-                if i == 0:
+                if j == 0:
                     diff = np.array([min(x, 2*pi - x) for x in diff])
-                self.max_dev[i] = max(self.max_dev[i], np.amax(diff))
-                self.variance[i] += np.sum(np.square(diff))
+                self.max_dev[j] = max(self.max_dev[j], np.amax(diff))
+                self.variance[j] += np.sum(np.square(diff))
         
         self.variance /= self.size
         

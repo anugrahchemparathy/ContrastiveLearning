@@ -9,7 +9,7 @@ import argparse
 # sys.path.append('./') # now can access entire repository, (important when running locally)
 
 
-from models import branch, predictor
+from ldcl.models import branch, predictor
 
 
 
@@ -39,7 +39,7 @@ def training_loop(args):
 
     # dataloader_kwargs = dict(drop_last=True, pin_memory=True, num_workers=16)
     dataloader_kwargs = {}
-    data_config_file = "orbit_config_default.json"
+    data_config_file = "data_configs/" + args.data_config #"data_configs/orbit_config_default.json"
 
     train_orbits_dataset, folder = physics.get_dataset(data_config_file, "../saved_datasets")
     print(f"Using dataset {folder}...")
@@ -97,7 +97,7 @@ def training_loop(args):
             z1 = get_z(input1)
             z2 = get_z(input2)
 
-            loss = apply_loss(z1, z2, rmseNCE)
+            loss = apply_loss(z1, z2, infoNCE)
 
             # optimization step
             loss.backward()
@@ -133,13 +133,12 @@ if __name__ == '__main__':
     parser.add_argument('--wd', default=0.001, type=float)
     parser.add_argument('--warmup_epochs', default=5, type=int)
     parser.add_argument('--fine_tune', default=False, type=bool)
-    parser.add_argument('--projhead', default=False, type=bool)
+    parser.add_argument('--projhead', default=True, type=bool)
     # parser.add_argument('--fname', default='default_model' , type = str)
     # parser.add_argument('--fname', default='simclr_infoNCE_1hidden_head_4dim' , type = str)
     parser.add_argument('--fname', default='rmseNCE_3D' , type = str)
+    parser.add_argument('--data_config', default="orbit_config_default.json", type=str)
 
     args = parser.parse_args()
     #print(args.projhead)
     training_loop(args)
-
-

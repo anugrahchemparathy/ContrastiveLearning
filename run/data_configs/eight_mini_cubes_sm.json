@@ -1,0 +1,37 @@
+{
+    "dynamics": "orbits",
+    "modality": "numerical",
+    "use_cached_data": "False",
+    "verbose": "True",
+    "orbit_settings": {
+        "mu": 1.0,
+        "num_trajs": 10240,
+        "num_ts": 10,
+        "traj_distr": {
+            "type": "uniform_with_intervals",
+            "dims": 3,
+            "intervals": "[[-0.5,-0.458],[-0.29,-0.25]],[[0.0,0.16],[0.83,1.00]],[[2.09,3.14],[5.23,6.28]]",
+            "combine": "all",
+            "mode": "explicit"
+        },
+        "t_distr": {
+            "type": "uniform",
+            "dims": 1,
+            "min": 0,
+            "max": 100 
+        },
+        "noise": 0,
+        "pq_resample_condition": "None",
+        "shuffle": "True",
+        "check": "False"
+    },
+    "pendulum_imagen_settings": {
+        "noise": 0,
+        "img_size": 32,
+        "diff_time": 0.5,
+        "bob_size": 1,
+        "continuous": "False",
+        "crop": 1,
+        "crop_c": "-1, -1"
+    }
+}
