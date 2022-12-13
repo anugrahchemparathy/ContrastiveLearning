@@ -45,3 +45,18 @@ class projectionHead(nn.Module):
     
     def forward(self, x):
         return self.head(x)
+
+class predictor(nn.Module):
+    def __init__(self, size, hidden_size = 64):
+        super().__init__()
+
+        layers = [
+            nn.Linear(size, hidden_size),
+            nn.ReLU(inplace = True),
+            nn.Linear(hidden_size, size)
+        ]
+
+        self.net = nn.Sequential(*layers)
+    
+    def forward(self, x):
+        return self.net(x)
