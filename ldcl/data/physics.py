@@ -109,17 +109,26 @@ def sample_distribution(dist, num):
         intervals = interval_generator(dist)
 
         final = np.zeros((0, dist.dims))
+        num_increased = 10000
         while np.shape(final)[0] < num:
+            num_to_generate = num - np.shape(final)[0]
+            if num_increased < 0.1 * num_to_generate:
+                num_to_generate *= 100
+            elif num_increased < 0.5 * num_to_generate:
+                num_to_generate *= 10
+
             ret = []
             for k in range(dist.dims):
-                ret.append(rng.uniform(np.min(intervals[k]), np.max(intervals[k]), size=num - np.shape(final)[0]))
+                ret.append(rng.uniform(np.min(intervals[k]), np.max(intervals[k]), size=num_to_generate))
 
             is_interval = in_intervals(dist, np.transpose(np.array(ret)))
 
             ret = np.swapaxes(np.array(ret), 0, 1)
             ret = ret[is_interval]
+            num_increased = ret.shape[0]
 
             final = np.concatenate((final, ret))
+            print(f"Interval generation: Generated {final.shape[0]} out of {num}...")
         final = final[:num]
 
         return final

@@ -39,11 +39,16 @@ def training_loop(args):
 
     # dataloader_kwargs = dict(drop_last=True, pin_memory=True, num_workers=16)
     dataloader_kwargs = {}
-    data_config_file = "data_configs/" + args.data_config #"data_configs/orbit_config_default.json"
+    if "," in args.data_config:
+        args.data_config = args.data_config.split(",")
+        data_config_file = ["data_configs/" + x for x in args.data_config] #"data_configs/orbit_config_default.json"
+    else:
+        data_config_file = ["data_configs/" + args.data_config] #"data_configs/orbit_config_default.json"
 
-    train_orbits_dataset, folder = physics.get_dataset(data_config_file, "../saved_datasets")
-    print(f"Using dataset {folder}...")
-    shutil.copy(data_config_file, os.path.join(save_progress_path, "data_config.json"))
+    print([1 / len(data_config_file)] * len(data_config_file))
+    train_orbits_dataset = physics.combine_datasets(data_config_file, [1 / len(data_config_file)] * len(data_config_file), "../saved_datasets")
+    if len(data_config_file):
+        shutil.copy(data_config_file[0], os.path.join(save_progress_path, "data_config.json"))
     train_orbits_loader = torch.utils.data.DataLoader(
         dataset = train_orbits_dataset,
         shuffle = True,
@@ -97,7 +102,7 @@ def training_loop(args):
             z1 = get_z(input1)
             z2 = get_z(input2)
 
-            loss = apply_loss(z1, z2, infoNCE)
+            loss = apply_loss(z1, z2, rmseNCE)
 
             # optimization step
             loss.backward()
@@ -133,7 +138,7 @@ if __name__ == '__main__':
     parser.add_argument('--wd', default=0.001, type=float)
     parser.add_argument('--warmup_epochs', default=5, type=int)
     parser.add_argument('--fine_tune', default=False, type=bool)
-    parser.add_argument('--projhead', default=True, type=bool)
+    parser.add_argument('--projhead', default=False, type=bool)
     # parser.add_argument('--fname', default='default_model' , type = str)
     # parser.add_argument('--fname', default='simclr_infoNCE_1hidden_head_4dim' , type = str)
     parser.add_argument('--fname', default='rmseNCE_3D' , type = str)
