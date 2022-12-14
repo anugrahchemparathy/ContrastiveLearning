@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+import numpy as np
 
 import os
 import shutil
@@ -91,7 +92,7 @@ def training_loop(args):
 
         return loss
     
-
+    losses = []
 
     for e in range(args.epochs):
         # main_branch.train()
@@ -114,6 +115,8 @@ def training_loop(args):
         #print the loss of the last iteration of that epoch
         print("epoch" + str(e) + "    loss = " + str(loss))
 
+        losses.append(loss.detach().numpy().flatten()[0])
+
         if e in saved_epochs:
             torch.save(encoder, os.path.join(save_progress_path,f'{e:02d}_encoder.pt'))
             torch.save(proj_head, os.path.join(save_progress_path,f'{e:02d}_projector.pt'))
@@ -123,6 +126,8 @@ def training_loop(args):
     torch.save(encoder, os.path.join(save_progress_path, 'final_encoder.pt'))
     torch.save(proj_head, os.path.join(save_progress_path, 'final_projector.pt'))
     torch.save(predictor, os.path.join(save_progress_path,'final_predictor.pt'))
+    losses = np.array(losses)
+    np.save(os.path.join(save_progress_path, "loss.npy"), losses)
 
 
     

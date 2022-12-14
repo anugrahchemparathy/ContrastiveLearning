@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+import numpy as np
 
 import os
 import shutil
@@ -9,7 +10,7 @@ import argparse
 # sys.path.append('./') # now can access entire repository, (important when running locally)
 
 
-from models import branch, predictor
+from ldcl.models import branch, predictor
 
 
 
@@ -40,7 +41,7 @@ def training_loop(args):
 
     # dataloader_kwargs = dict(drop_last=True, pin_memory=True, num_workers=16)
     dataloader_kwargs = {}
-    data_config_file = "orbit_config_default.json"
+    data_config_file = "data_configs/orbit_config_default.json"
 
     train_orbits_dataset, folder = physics.get_dataset(data_config_file, "../saved_datasets")
     print(f"Using dataset {folder}...")
@@ -83,7 +84,7 @@ def training_loop(args):
         loss = 0.5 * loss_func(z1, z2) + 0.5 * loss_func(z2, z1)
         return loss
     
-
+    losses = []
 
     for e in range(args.epochs):
         # main_branch.train()
@@ -108,6 +109,8 @@ def training_loop(args):
         #print the loss of the last iteration of that epoch
         print("epoch" + str(e) + "    loss = " + str(loss))
 
+        losses.append(loss.detach().numpy().flatten()[0])
+
         if e in saved_epochs:
             torch.save(encoder, os.path.join(save_progress_path,f'{e:02d}_encoder.pt'))
             # if args.projhead:
@@ -115,6 +118,9 @@ def training_loop(args):
 
 
     torch.save(encoder, os.path.join(save_progress_path, 'final_encoder.pt'))
+    losses = np.array(losses)
+    np.save(os.path.join(save_progress_path, "loss.npy"), losses)
+    
     # if args.projhead:
     #     torch.save(proj_head, os.path.join(save_progress_path, 'final_projector.pt'))
 
@@ -128,7 +134,7 @@ def training_loop(args):
 if __name__ == '__main__':
     pass
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epochs', default=100, type=int)
+    parser.add_argument('--epochs', default=500, type=int)
     parser.add_argument('--lr', default=0.02, type=float)
     parser.add_argument('--bsz', default=512, type=int)
     parser.add_argument('--wd', default=0.001, type=float)
@@ -137,7 +143,7 @@ if __name__ == '__main__':
     parser.add_argument('--projhead', default=False, type=bool)
     # parser.add_argument('--fname', default='default_model' , type = str)
     # parser.add_argument('--fname', default='simclr_infoNCE_1hidden_head_4dim' , type = str)
-    parser.add_argument('--fname', default='rmseNCE_3D' , type = str)
+    parser.add_argument('--fname', default='rmseNCE_3D_e1500' , type = str)
 
     args = parser.parse_args()
     #print(args.projhead)

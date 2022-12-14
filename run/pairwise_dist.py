@@ -36,12 +36,17 @@ def dist(args):
     return avg_dist, folder
 
 if __name__ == '__main__':
-    pass
+    """
+    To use this script, just enter the location of the encoder and the config file you want to use 
+    """
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('--encoder', type = str, required = True)
     parser.add_argument('--config', type = str, required = True)
 
     args = parser.parse_args()
 
-    print(dist(args))
+    avg_dist, folder = dist(args)
+    print(avg_dist)
+    print(folder)
     
