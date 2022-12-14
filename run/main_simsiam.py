@@ -10,7 +10,7 @@ import argparse
 # sys.path.append('./') # now can access entire repository, (important when running locally)
 
 
-from models import branch, predictor
+from ldcl.models import branch, predictor
 
 
 
@@ -41,7 +41,7 @@ def training_loop(args):
 
     # dataloader_kwargs = dict(drop_last=True, pin_memory=True, num_workers=16)
     dataloader_kwargs = {}
-    data_config_file = "orbit_config_default.json"
+    data_config_file = "data_configs/orbit_config_default.json"
 
     train_orbits_dataset, folder = physics.get_dataset(data_config_file, "../saved_datasets")
     print(f"Using dataset {folder}...")
@@ -149,7 +149,7 @@ if __name__ == '__main__':
     #parser.add_argument('--projhead', default=False, type=bool)
     # parser.add_argument('--fname', default='default_model' , type = str)
     # parser.add_argument('--fname', default='simclr_infoNCE_1hidden_head_4dim' , type = str)
-    parser.add_argument('--fname', default='rmseNCE_3D' , type = str)
+    parser.add_argument('--fname', default='simsiam_test1' , type = str)
 
     args = parser.parse_args()
     #print(args.projhead)
