@@ -1,31 +1,17 @@
 {
     "dynamics": "orbits",
     "modality": "numerical",
-    "use_cached_data": "True",
+    "use_cached_data": "False",
     "verbose": "True",
     "orbit_settings": {
         "mu": 1.0,
         "num_trajs": 10240,
-        "num_ts": 100,
+        "num_ts": 10,
         "traj_distr": {
-            "type": "stack",
-            "dists": [
-                {
-                    "type": "uniform",
-                    "dims": 1,
-                    "min": -0.5,
-                    "max": -0.25
-                },
-                {
-                    "type": "single",
-                    "value": 0.5
-                },
-                {
-                    "type": "single",
-                    "value": 0
-                }
-            ],
-            "reorder_axes": "None"
+            "type": "uniform",
+            "dims": 3,
+            "min": "-0.5,0.0,0.0",
+            "max": "-0.25,1.0,6.28318530"
         },
         "t_distr": {
             "type": "uniform",

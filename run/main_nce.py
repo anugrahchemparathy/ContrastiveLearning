@@ -52,8 +52,7 @@ def training_loop(args):
         batch_size = args.bsz,
     )
 
-    encoder = branch.branchEncoder(encoder_out=3)
-    proj_head = branch.projectionHead(head_size=4)
+    encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=True, activation= nn.Sigmoid())
     torch.save(encoder, os.path.join(save_progress_path, 'start_encoder.pt'))
     # if args.projhead:
     #     torch.save(proj_head, os.path.join(save_progress_path, 'start_projector.pt'))
@@ -78,7 +77,6 @@ def training_loop(args):
     # helpers
     def get_z(x):
         out = encoder(x.float())
-        # if args.projhead: out = proj_head(out)
         return out
     def apply_loss(z1, z2, loss_func = normalmseNCE):
         loss = 0.5 * loss_func(z1, z2) + 0.5 * loss_func(z2, z1)
@@ -91,7 +89,6 @@ def training_loop(args):
 
         for it, (input1, input2, y) in enumerate(train_orbits_loader):
             encoder.zero_grad()
-            # if args.projhead: proj_head.zero_grad()
 
             # forward pass
             # z1 = get_z(input1.cuda())
@@ -113,16 +110,11 @@ def training_loop(args):
 
         if e in saved_epochs:
             torch.save(encoder, os.path.join(save_progress_path,f'{e:02d}_encoder.pt'))
-            # if args.projhead:
-            #     torch.save(proj_head, os.path.join(save_progress_path,f'{e}_projector.pt'))
 
 
     torch.save(encoder, os.path.join(save_progress_path, 'final_encoder.pt'))
     losses = np.array(losses)
     np.save(os.path.join(save_progress_path, "loss.npy"), losses)
-    
-    # if args.projhead:
-    #     torch.save(proj_head, os.path.join(save_progress_path, 'final_projector.pt'))
 
     
     
@@ -134,16 +126,14 @@ def training_loop(args):
 if __name__ == '__main__':
     pass
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epochs', default=500, type=int)
+    parser.add_argument('--epochs', default=100, type=int)
     parser.add_argument('--lr', default=0.02, type=float)
     parser.add_argument('--bsz', default=512, type=int)
     parser.add_argument('--wd', default=0.001, type=float)
     parser.add_argument('--warmup_epochs', default=5, type=int)
     parser.add_argument('--fine_tune', default=False, type=bool)
     parser.add_argument('--projhead', default=False, type=bool)
-    # parser.add_argument('--fname', default='default_model' , type = str)
-    # parser.add_argument('--fname', default='simclr_infoNCE_1hidden_head_4dim' , type = str)
-    parser.add_argument('--fname', default='rmseNCE_3D_e1500' , type = str)
+    parser.add_argument('--fname', default='rmse_100_e' , type = str)
 
     args = parser.parse_args()
     #print(args.projhead)

@@ -52,8 +52,8 @@ def training_loop(args):
         batch_size = args.bsz,
     )
 
-    encoder = branch.branchEncoder(encoder_out=3)
-    proj_head = branch.projectionHead(head_size=3)
+    encoder = branch.branchEncoder(encoder_out=3, useBatchNorm = True)
+    proj_head = branch.projectionHead(head_in=3, head_out=4)
 
     torch.save(encoder, os.path.join(save_progress_path, 'start_encoder.pt'))
     torch.save(proj_head, os.path.join(save_progress_path, 'start_projector.pt'))
@@ -141,7 +141,7 @@ if __name__ == '__main__':
     #parser.add_argument('--projhead', default=False, type=bool)
     # parser.add_argument('--fname', default='default_model' , type = str)
     # parser.add_argument('--fname', default='simclr_infoNCE_1hidden_head_4dim' , type = str)
-    parser.add_argument('--fname', default='simclr_test1' , type = str)
+    parser.add_argument('--fname', default='simclr_test2' , type = str)
 
     args = parser.parse_args()
     #print(args.projhead)
