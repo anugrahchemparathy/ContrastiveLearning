@@ -13,8 +13,8 @@
                 {
                     "type": "uniform",
                     "dims": 1,
-                    "min": 0,
-                    "max": 1
+                    "min": -0.5,
+                    "max": -0.25
                 },
                 {
                     "type": "single",
@@ -22,7 +22,7 @@
                 },
                 {
                     "type": "single",
-                    "value": 3
+                    "value": 0
                 }
             ],
             "reorder_axes": "None"
