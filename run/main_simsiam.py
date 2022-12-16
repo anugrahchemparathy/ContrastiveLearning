@@ -27,7 +27,7 @@ device = get_device()
 import pathlib
 SCRIPT_PATH = pathlib.Path(__file__).parent.resolve().as_posix() + "/" # always get this directory
 
-saved_epochs = list(range(20)) + [20,40,60,80]
+saved_epochs = list(range(20)) + [20,40,60,80,100,200,300,400,500,1000,1500]
 
 def training_loop(args):
 

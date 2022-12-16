@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
+import matplotlib.pyplot as plt
 
 import os
 import shutil
@@ -27,7 +28,7 @@ device = get_device()
 import pathlib
 SCRIPT_PATH = pathlib.Path(__file__).parent.resolve().as_posix() + "/" # always get this directory
 
-saved_epochs = list(range(20)) + [20,40,60,80]
+saved_epochs = list(range(20)) + [20,40,60,80,100,200,300,400,500,1000,1400]
 
 def training_loop(args):
 
@@ -52,7 +53,7 @@ def training_loop(args):
         batch_size = args.bsz,
     )
 
-    encoder = branch.branchEncoder(encoder_out=3, useBatchNorm = True)
+    encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=True, activation= nn.Sigmoid())
     proj_head = branch.projectionHead(head_in=3, head_out=4)
 
     torch.save(encoder, os.path.join(save_progress_path, 'start_encoder.pt'))
@@ -120,19 +121,26 @@ def training_loop(args):
     torch.save(proj_head, os.path.join(save_progress_path, 'final_projector.pt'))
     losses = np.array(losses)
     np.save(os.path.join(save_progress_path, "loss.npy"), losses)
-
+    plot_loss(losses, title = args.fname, save_progress_path = save_progress_path)
 
     
     
     return encoder
 
 
-
+def plot_loss(loss, title, save_progress_path):
+    #print(loss.shape)
+    plt.plot(np.arange(loss.shape[0]), loss)
+    plt.title(title)
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    
+    plt.savefig(os.path.join(save_progress_path, f'training_loss.png'))
 
 if __name__ == '__main__':
     pass
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epochs', default=100, type=int)
+    parser.add_argument('--epochs', default=1500, type=int)
     parser.add_argument('--lr', default=0.02, type=float)
     parser.add_argument('--bsz', default=512, type=int)
     parser.add_argument('--wd', default=0.001, type=float)
@@ -141,7 +149,7 @@ if __name__ == '__main__':
     #parser.add_argument('--projhead', default=False, type=bool)
     # parser.add_argument('--fname', default='default_model' , type = str)
     # parser.add_argument('--fname', default='simclr_infoNCE_1hidden_head_4dim' , type = str)
-    parser.add_argument('--fname', default='simclr_test2' , type = str)
+    parser.add_argument('--fname', default='simclr_1500_d' , type = str)
 
     args = parser.parse_args()
     #print(args.projhead)

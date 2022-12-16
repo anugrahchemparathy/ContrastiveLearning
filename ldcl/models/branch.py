@@ -34,16 +34,17 @@ class branchEncoder(nn.Module):
 # implementing the projection head described in simclr paper
 
 class projectionHead(nn.Module):
-    def __init__(self, head_in = 3, head_out = 4, hidden_size = 64):
+    def __init__(self, head_in = 3, head_out = 4, hidden_size = 64, num_layers = 3, activation = nn.ReLU(inplace=True)):
         super().__init__()
+        self.num_layers = num_layers
+        self.activation = activation
 
-        layers = [
-            nn.Linear(head_in, hidden_size),
-            nn.ReLU(inplace = True),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(inplace = True),
-            nn.Linear(hidden_size, head_out)
-        ]
+        layers = [nn.Linear(head_in, hidden_size)]
+        for i in range(self.num_layers - 2):
+            layers.append(self.activation)
+            layers.append(nn.Linear(hidden_size, hidden_size))
+        layers.append(self.activation)
+        layers.append(nn.Linear(hidden_size, head_out))
 
         self.head = nn.Sequential(*layers)
     

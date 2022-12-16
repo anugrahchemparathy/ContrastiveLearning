@@ -27,7 +27,7 @@ device = get_device()
 import pathlib
 SCRIPT_PATH = pathlib.Path(__file__).parent.resolve().as_posix() + "/" # always get this directory
 
-saved_epochs = list(range(20)) + [20,40,60,80]
+saved_epochs = list(range(20)) + [20,40,60,80,100,200,300,400,500,1000,1500]
 
 def training_loop(args):
 
@@ -52,7 +52,8 @@ def training_loop(args):
         batch_size = args.bsz,
     )
 
-    encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=True, activation= nn.Sigmoid())
+    encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=True)
+    # encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=False, activation= nn.Sigmoid())
     torch.save(encoder, os.path.join(save_progress_path, 'start_encoder.pt'))
     # if args.projhead:
     #     torch.save(proj_head, os.path.join(save_progress_path, 'start_projector.pt'))
@@ -126,14 +127,14 @@ def training_loop(args):
 if __name__ == '__main__':
     pass
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epochs', default=100, type=int)
+    parser.add_argument('--epochs', default=1500, type=int)
     parser.add_argument('--lr', default=0.02, type=float)
     parser.add_argument('--bsz', default=512, type=int)
     parser.add_argument('--wd', default=0.001, type=float)
     parser.add_argument('--warmup_epochs', default=5, type=int)
     parser.add_argument('--fine_tune', default=False, type=bool)
     parser.add_argument('--projhead', default=False, type=bool)
-    parser.add_argument('--fname', default='rmse_100_e' , type = str)
+    parser.add_argument('--fname', default='rmse_1500_a' , type = str)
 
     args = parser.parse_args()
     #print(args.projhead)
