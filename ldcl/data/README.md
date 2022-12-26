@@ -48,3 +48,11 @@ Here are distributions that are combinations of other distributions:
 * **stack**. Each new distribution specified in ``"dists"`` creates new dimensions associated with it. If you have a 1D distribution, then a 2D distribution, then another 2D distribution, the first occupies dim 1, then the second dims 2 and 3, and the third dims 4 and5, so you get back 5D vectors. If it's not convenient for the generated dimensions to be right next each other, you can reorder them with ``reorder_axes``. This should be a list of the numbers 0 to D-1 (where D is the number of dimensions) that's a permutation of 0 to D-1, and 0 should go where the first dimension should go, for example, if I want to reverse 5 dimensions, I'd put ``"reorder_axes"="4,3,2,1,0".``
 
 Hopefully this makes how the distribution generation works a bit easier to understand. This system is made to be hopefully as extensible as possible, so we can run all sorts of experiments.
+
+## Other utility functions
+
+There are a couple other useful utility functions exposed in ``ldcl.data``.
+* ``ldcl.data.physics.combine_datasets`` allows you to generate a dataset that's a combination of other existing config files (that way you don't have to make a new config file just to merge the two.)
+* ``ldcl.data.dists.is_in_distribution`` allows you to check if values are in a given data distribution.
+
+These might be useful for some more advanced experiments.
