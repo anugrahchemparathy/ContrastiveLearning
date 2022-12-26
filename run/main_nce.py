@@ -16,7 +16,7 @@ from ldcl.models import branch, predictor
 
 from ldcl.tools.seed import set_deterministic
 from ldcl.optimizers.lr_scheduler import LR_Scheduler
-from ldcl.data import physics, neworbits
+from ldcl.data import physics
 from ldcl.losses.nce import infoNCE, rmseNCE, normalmseNCE
 from ldcl.losses.simclr import NT_Xent_loss, infoNCE
 from ldcl.tools.device import get_device
