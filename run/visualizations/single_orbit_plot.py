@@ -12,9 +12,6 @@ oneD_span, _ = get_dataset("../data_configs/H_vary.json", "../../saved_datasets"
 single_orbit_embeds, single_orbit_vals = embed("../saved_models/rmse_vanilla/final_encoder.pt", single_orbit)
 oneD_span_embeds, oneD_span_vals = embed("../saved_models/rmse_vanilla/final_encoder.pt", oneD_span)
 
-single_orbit_embeds = PCA(n_components=2).fit_transform(single_orbit_embeds)
-oneD_span_embeds = PCA(n_components=2).fit_transform(oneD_span_embeds)
-
 # Colors
 
 viridis = get_cmap('viridis')
@@ -33,7 +30,7 @@ oneD_span_sizes = 2
 
 # Plot
 
-plot = VisPlot(2) # 3D plot, 2 for 2D plot
+plot = VisPlot(3) # 3D plot, 2 for 2D plot
 plot.add(single_orbit_embeds, 
     size=single_orbit_sizes, 
     color=single_orbit_colors, 
