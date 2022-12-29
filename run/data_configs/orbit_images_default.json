@@ -1,11 +1,11 @@
 {
     "dynamics": "orbits",
     "modality": "image",
-    "use_cached_data": "False",
+    "use_cached_data": "True",
     "verbose": "True",
     "orbit_settings": {
         "mu": 1.0,
-        "num_trajs": 10240,
+        "num_trajs": 2560,
         "num_ts": 10,
         "traj_distr": {
             "type": "uniform",
@@ -27,8 +27,11 @@
     "orbits_imagen_settings": {
         "noise": 0,
         "img_size": 224,
-        "diff_time": 0.5,
-        "bob_size": 2,
+        "num_pts": 10,
+        "diff_time": 2,
+        "start_color": "0.0,0.0,0.0",
+        "end_color": "1.0,0.0,0.0",
+        "scale": 4,
         "continuous": "True",
         "not_visible": "do_nothing"
     }

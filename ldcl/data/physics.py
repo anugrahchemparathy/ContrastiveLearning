@@ -16,7 +16,7 @@ import torch
 from .config import read_config
 
 from .pendulum import pendulum_num_gen, pendulum_img_gen
-from .orbit import orbits_num_gen
+from .orbit import orbits_num_gen, orbits_img_gen
 
 rng = np.random.default_rng(9)  # manually seed random number generator
 verbose = True
@@ -87,7 +87,7 @@ def get_dataset(config, saved_dir, return_bundle=False):
         elif config.dynamics == "orbits":
             bundle = orbits_num_gen(config)
             if config.modality == "image":
-                raise NotImplementedError
+                bundle = orbits_img_gen(config, bundle)
             elif config.modality == "numerical":
                 bundle = bundle
             else:
