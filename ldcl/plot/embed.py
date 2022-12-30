@@ -26,33 +26,30 @@ def embed(encoder_location_or_encoder, orbits_dataset):
         branch_encoder = encoder_location_or_encoder
     branch_encoder.eval()
 
-    encoder_outputs_list = []
-    target_values = []
-    inputs = []
+    data = orbits_dataset.data
+    data = data.reshape([data.shape[0] * data.shape[1]] + list(data.shape)[2:])
+    data = torch.from_numpy(data)
+    encoder_outputs = branch_encoder(data.float()).detach().numpy()
+    print(encoder_outputs.shape)
 
-    for it, (input1, input2, y) in enumerate(orbits_loader):
-        predicted_representation = branch_encoder(input1.float()).detach().numpy()[0]
-        inputs.append(input1.float().numpy()[0])
-        encoder_outputs_list.append(predicted_representation)
+    values = {}
+    print([x.shape for x in orbits_dataset.bundle.values()])
+    for k, v in orbits_dataset.bundle.items():
+        if k == "idxs_":
+            continue
+        if len(v.shape) == 3:
+            values[k] = v[:, :, 0]
+        elif len(v.shape) == 2:
+            assert(v.shape[1] == 1) # should be this shape
+            values[k] = v
+        else:
+            raise NotImplementedError
 
-        #append conserved quantities to the end of the representation for plotting, y = (1, )
-        #[2=phi0,3=energy,4=angular_momentum] discard [0=eccentricity, 1=semimajor_axis]
-        target_values.append(np.array( (y["phi0"].item(),y["H"].item(),y["L"].item()) ))
+        if v.shape[1] != encoder_outputs.shape[0] / v.shape[0]: # conserved quantities
+            values[k] = np.repeat(values[k], encoder_outputs.shape[0] / v.shape[0], axis=1)
 
-    encoder_outputs = np.vstack(encoder_outputs_list)
-    target_values = np.vstack(target_values)
+        values[k] = values[k].flatten()
 
-    phi0_c_values = target_values[:,0]
-    energy_c_values = target_values[:,1]
-    angular_momentum_c_values = target_values[:,2]
+    print(f"First output val: {encoder_outputs[0, 0, 0]}")
 
-    inputs = np.array(inputs)
-    return encoder_outputs, {
-        "phi0": phi0_c_values,
-        "H": energy_c_values,
-        "L": angular_momentum_c_values,
-        "x": inputs[:, 0],
-        "y": inputs[:, 1],
-        "v.x": inputs[:, 2],
-        "v.y": inputs[:, 3]
-    }
+    return encoder_outputs, values

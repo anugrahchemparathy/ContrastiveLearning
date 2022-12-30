@@ -37,7 +37,7 @@ class ConservationDataset(torch.utils.data.Dataset):
             x_view1 = x_output[0]
             x_view2 = x_output[1]
 
-            return [x_view1,x_view2, {k: v[idx] for k, v in self.bundle.items()}]
+            return [x_view1,x_view2, {k: v[idx] for k, v in self.bundle.items()} | {"idxs_": random_x_rows}]
         else:
             raise ValueError
 

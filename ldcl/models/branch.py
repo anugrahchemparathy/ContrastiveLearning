@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
-
+import torchvision
 
 class branchEncoder(nn.Module):
     def __init__(self, encoder_in = 4, encoder_out = 3, encoder_hidden = 64, num_layers = 4, useBatchNorm = False, activation = nn.ReLU(inplace=True)):
@@ -10,24 +10,45 @@ class branchEncoder(nn.Module):
         self.bn = useBatchNorm
         self.activation = activation
 
-
         encoder_layers = [nn.Linear(encoder_in,encoder_hidden)]
 
         for i in range(self.num_layers - 2):
             if self.bn: encoder_layers.append(nn.BatchNorm1d(encoder_hidden))
-            # encoder_layers.append(nn.ReLU(inplace=True))
             encoder_layers.append(self.activation)
             encoder_layers.append(nn.Linear(encoder_hidden, encoder_hidden))
 
         if self.bn: encoder_layers.append(nn.BatchNorm1d(encoder_hidden))
         encoder_layers.append(self.activation)
-        # encoder_layers.append(nn.ReLU(inplace=True))
         encoder_layers.append(nn.Linear(encoder_hidden, encoder_out))
-
 
         self.encoder = nn.Sequential(*encoder_layers)
 
     def forward(self, x):
+        return self.encoder(x)
+
+class branchImageEncoder(nn.Module):
+    def __init__(self, encoder_out = 3, encoder_hidden = 64, num_layers = 4, useBatchNorm = False, activation = nn.ReLU(inplace=True)):
+        super().__init__()
+        self.num_layers = num_layers
+        self.bn = useBatchNorm
+        self.activation = activation
+        self.encoder = torchvision.models.resnet18(weights=None)
+
+        encoder_layers = [nn.Linear(512,encoder_hidden)]
+
+        for i in range(self.num_layers - 2):
+            if self.bn: encoder_layers.append(nn.BatchNorm1d(encoder_hidden))
+            encoder_layers.append(self.activation)
+            encoder_layers.append(nn.Linear(encoder_hidden, encoder_hidden))
+
+        if self.bn: encoder_layers.append(nn.BatchNorm1d(encoder_hidden))
+        encoder_layers.append(self.activation)
+        encoder_layers.append(nn.Linear(encoder_hidden, encoder_out))
+
+        self.encoder.fc = nn.Sequential(*encoder_layers)
+
+    def forward(self, x):
+        x = torch.swapaxes(x, 1, 3)
         return self.encoder(x)
 
 # projectionHead

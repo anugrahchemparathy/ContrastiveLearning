@@ -15,6 +15,10 @@ def pendulum_num_gen(config):
         :param config: configuration details
         :return: energy, data=(angle, angular momentum), predata=(time, energy)
     """
+    global rng
+    if isinstance(config.random_seed, int):
+        rng = np.random.default_rng(config.random_seed)
+
     settings = config.pendulum_settings
 
     t = np.reshape(sample_distribution(settings.t_distr, settings.num_ts * settings.num_trajs), (settings.num_trajs, settings.num_ts))

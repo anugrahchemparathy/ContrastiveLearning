@@ -41,7 +41,7 @@ def training_loop(args):
 
     # dataloader_kwargs = dict(drop_last=True, pin_memory=True, num_workers=16)
     dataloader_kwargs = {}
-    data_config_file = "data_configs/orbit_config_default.json"
+    data_config_file = "data_configs/" + args.data_config
 
     train_orbits_dataset, folder = physics.get_dataset(data_config_file, "../saved_datasets")
     print(f"Using dataset {folder}...")
@@ -52,7 +52,8 @@ def training_loop(args):
         batch_size = args.bsz,
     )
 
-    encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=True)
+    #encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=True)
+    encoder = branch.branchImageEncoder(encoder_out=3)
     # encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=False, activation= nn.Sigmoid())
     torch.save(encoder, os.path.join(save_progress_path, 'start_encoder.pt'))
     # if args.projhead:
@@ -135,6 +136,7 @@ if __name__ == '__main__':
     parser.add_argument('--fine_tune', default=False, type=bool)
     parser.add_argument('--projhead', default=False, type=bool)
     parser.add_argument('--fname', default='rmse_1500_a' , type = str)
+    parser.add_argument('--data_config', default='orbit_config_default.json' , type = str)
 
     args = parser.parse_args()
     #print(args.projhead)

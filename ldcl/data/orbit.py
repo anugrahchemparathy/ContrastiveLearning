@@ -36,6 +36,12 @@ def eccentric_anomaly_from_mean(e, M, tol=1e-13):
     return E
 
 def orbits_num_gen(config):
+    global rng
+    if isinstance(config.random_seed, int):
+        print(config.random_seed, rng)
+        rng = np.random.default_rng(config.random_seed)
+        print(rng, "rng")
+
     settings = config.orbit_settings
 
     mu = settings.mu  # standard gravitational parameter, i.e. G*M
@@ -106,12 +112,14 @@ def orbits_num_gen(config):
         data += settings.noise * rng.standard_normal(size=data.shape)
 
     return {
-        "e": e,
-        "a": a,
         "phi0": phi0,
         "H": H,
         "L": L,
-        "data": data
+        "data": data,
+        "x": data[..., 0],
+        "y": data[..., 1],
+        "v.x": data[..., 0],
+        "v.y": data[..., 1]
     }
 
 def orbits_img_gen(config, bundle):
