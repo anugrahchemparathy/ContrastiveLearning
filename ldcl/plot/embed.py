@@ -40,16 +40,16 @@ def embed(encoder_location_or_encoder, orbits_dataset):
         if len(v.shape) == 3:
             values[k] = v[:, :, 0]
         elif len(v.shape) == 2:
-            assert(v.shape[1] == 1) # should be this shape
             values[k] = v
         else:
             raise NotImplementedError
 
         if v.shape[1] != encoder_outputs.shape[0] / v.shape[0]: # conserved quantities
             values[k] = np.repeat(values[k], encoder_outputs.shape[0] / v.shape[0], axis=1)
+        print(values[k].shape)
 
         values[k] = values[k].flatten()
 
-    print(f"First output val: {encoder_outputs[0, 0, 0]}")
+    print(f"First output val: {encoder_outputs.flatten()[0]}")
 
     return encoder_outputs, values
