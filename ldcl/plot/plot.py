@@ -169,7 +169,7 @@ class VisPlot:
                         line=dict(width=outline_width, color='black'),
                         opacity=1
                     ),
-                    text=[{k: v[i] for k, v in label.items()} for i in range(np.shape(points)[0])]
+                    text=["<br>".join([f"{k}={np.format_float_positional(v[i], precision=4)}" for k, v in label.items()]) for i in range(np.shape(points)[0])]
                 ), 1, plot + 1)
 
     def add_with_cmap(self, points, label, cmap=None, cby=None, **otherargs):
