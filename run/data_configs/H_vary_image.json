@@ -1,0 +1,48 @@
+{
+    "dynamics": "orbits",
+    "modality": "image",
+    "use_cached_data": "True",
+    "verbose": "True",
+    "orbit_settings": {
+        "mu": 1.0,
+        "num_trajs": 512,
+        "num_ts": 10,
+        "traj_distr": {
+            "type": "stack",
+            "reorder_axes": "None",
+            "dists": [
+                {
+                    "type": "uniform",
+                    "dims": 1,
+                    "min": -0.5,
+                    "max": -0.25
+                },
+                {
+                    "type": "single",
+                    "value": "0.5,3.14"
+                }
+            ]
+        },
+        "t_distr": {
+            "type": "uniform",
+            "dims": 1,
+            "min": 0,
+            "max": 100 
+        },
+        "noise": 0,
+        "pq_resample_condition": "None",
+        "shuffle": "True",
+        "check": "False"
+    },
+    "orbits_imagen_settings": {
+        "noise": 0,
+        "img_size": 56,
+        "num_pts": 10,
+        "diff_time": 1,
+        "start_color": "0.0,0.0,0.0",
+        "end_color": "1.0,0.0,0.0",
+        "scale": 4,
+        "continuous": "True",
+        "not_visible": "do_nothing"
+    }
+}

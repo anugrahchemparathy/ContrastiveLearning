@@ -24,6 +24,7 @@ def NT_Xent_loss(za,zb, temperature = 0.1):
     # remove diagonal elements entirely from the tensor
     total_logits = total_logits[torch.eye(2 * batch_size) == 0].view(2 * batch_size, -1) # (2 * batch_size, 2 * batch_size - 1)
     labels = torch.tensor([batch_size - 1 + i for i in range(batch_size)] + [i for i in range(batch_size)])
+    labels = labels.to(total_logits.device)
 
     loss = F.cross_entropy(total_logits, labels)
     return loss
@@ -39,7 +40,8 @@ def infoNCE(nn, p, temperature=0.1):
     logits = nn @ p.T
     logits /= temperature
     n = p.shape[0]
-    labels = torch.arange(0, n, dtype=torch.long)#.cuda()
+    labels = torch.arange(0, n, dtype=torch.long)
+    labels = labels.to(logits.device)
     loss = torch.nn.functional.cross_entropy(logits, labels)
     return loss
 

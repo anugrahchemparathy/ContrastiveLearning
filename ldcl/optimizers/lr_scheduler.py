@@ -3,8 +3,7 @@ import numpy as np
 
 
 class LR_Scheduler(object):
-    def __init__(self, optimizer, warmup_epochs, warmup_lr, num_epochs, base_lr, final_lr, iter_per_epoch,
-                 constant_predictor_lr=False):
+    def __init__(self, optimizer, warmup_epochs, warmup_lr, num_epochs, base_lr, final_lr, iter_per_epoch, constant_predictor_lr=False):
         self.base_lr = base_lr
         self.constant_predictor_lr = constant_predictor_lr
         warmup_iter = iter_per_epoch * warmup_epochs
@@ -14,17 +13,18 @@ class LR_Scheduler(object):
                 1 + np.cos(np.pi * np.arange(decay_iter) / decay_iter))
 
         self.lr_schedule = np.concatenate((warmup_lr_schedule, cosine_lr_schedule))
+        self.lr_schedule = np.where(self.lr_schedule == 0.0, 1e-10, self.lr_schedule) # mps hates 0 learn rate
         self.optimizer = optimizer
         self.iter = 0
         self.current_lr = 0
 
     def step(self):
         for param_group in self.optimizer.param_groups:
-
             if self.constant_predictor_lr and param_group['name'] == 'predictor':
                 param_group['lr'] = self.base_lr
             else:
                 lr = param_group['lr'] = self.lr_schedule[self.iter]
+                pass
 
         self.iter += 1
         self.current_lr = lr
@@ -33,6 +33,17 @@ class LR_Scheduler(object):
     def get_lr(self):
         return self.current_lr
 
+def get_lr_scheduler(args, optimizer, train_orbits_loader):
+    return LR_Scheduler(
+        optimizer=optimizer,
+        warmup_epochs=args.warmup_epochs,
+        warmup_lr=0,
+        num_epochs=args.epochs,
+        base_lr=args.lr * args.bsz / 256,
+        final_lr=0,
+        iter_per_epoch=len(train_orbits_loader),
+        constant_predictor_lr=True
+    )  
 
 if __name__ == "__main__":
     import torchvision

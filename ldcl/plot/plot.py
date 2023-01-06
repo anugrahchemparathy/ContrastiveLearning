@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 
 import numpy as np
+import os
 
 from .color import get_cmap
 
@@ -243,3 +244,12 @@ class VisPlot:
             plt.show()
         elif self.mode == "plotly_3d":
             self.fig.write_html('plot.html', auto_open=True)
+
+def plot_loss(loss, title, save_progress_path):
+    plt.plot(np.arange(loss.shape[0]), loss)
+    plt.title(title)
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    
+    plt.savefig(os.path.join(save_progress_path, f'training_loss.png'))
+

@@ -26,3 +26,13 @@ def get_device(cpu_only=False):
         device = torch.device("cpu")
 
     return device
+
+def t2np(tnsr):
+    """
+        Convert tensor to numpy array, no matter what device it's on.
+    """
+
+    if "cpu" in str(tnsr.device):
+        return tnsr.detach().numpy()
+    elif "mps" in str(tnsr.device) or "cuda" in str(tnsr.device):
+        return tnsr.cpu().detach().numpy()

@@ -3,14 +3,19 @@ from ldcl.plot.embed import embed
 from ldcl.plot.color import get_cmap
 
 from ldcl.data.physics import get_dataset
+from ldcl.tools.device import get_device
 
 from sklearn.decomposition import PCA
 
-single_orbit, _ = get_dataset("../data_configs/single_orbit.json", "../../saved_datasets")
-oneD_span, _ = get_dataset("../data_configs/H_vary.json", "../../saved_datasets")
+device = get_device()
 
-single_orbit_embeds, single_orbit_vals = embed("../saved_models/rmse_vanilla/final_encoder.pt", single_orbit)
-oneD_span_embeds, oneD_span_vals = embed("../saved_models/rmse_vanilla/final_encoder.pt", oneD_span)
+#entire_dataset, _ = get_dataset("../data_configs/orbit_images_med2.json", "../../saved_datasets")
+single_orbit, _ = get_dataset("../data_configs/single_orbit_image.json", "../../saved_datasets")
+oneD_span, _ = get_dataset("../data_configs/H_vary_image.json", "../../saved_datasets")
+
+#entire_dataset_embeds, entire_dataset_vals = embed("../saved_models/simclr_image_test3/final_encoder.pt", entire_dataset, device=device)
+single_orbit_embeds, single_orbit_vals = embed("../saved_models/simclr_image_test4/final_encoder.pt", single_orbit, device=device)
+oneD_span_embeds, oneD_span_vals = embed("../saved_models/simclr_image_test4/final_encoder.pt", oneD_span, device=device)
 
 """
 # Dim reduction (2d only).
@@ -54,8 +59,9 @@ def add_demo():
 def add_with_cmap_demo():
     plot = VisPlot(3, num_subplots=2) # 3D plot, 2 for 2D plot
 
-    plot.add_with_cmap(oneD_span_embeds, oneD_span_vals, cmap="viridis", cby=["x", "H"], size=0.5, outline=False)
-    plot.add_with_cmap(single_orbit_embeds, single_orbit_vals, cmap="plasma", cby=["x", "H"], size=4, outline=False)
+    #plot.add_with_cmap(entire_dataset_embeds, entire_dataset_vals, cmap="viridis", cby=["x", "H"], size=2, outline=False)
+    plot.add_with_cmap(oneD_span_embeds, oneD_span_vals, cmap="viridis", cby=["x", "H"], size=2, outline=False)
+    plot.add_with_cmap(single_orbit_embeds, single_orbit_vals, cmap="viridis", cby=["x", "H"], size=4, outline=True)
 
     return plot
 

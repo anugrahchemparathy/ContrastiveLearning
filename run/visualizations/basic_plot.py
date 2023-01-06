@@ -3,11 +3,15 @@ from ldcl.plot.embed import embed
 from ldcl.plot.color import get_cmap
 
 from ldcl.data.physics import get_dataset
+from ldcl.tools.device import get_device
 
 from sklearn.decomposition import PCA
 
-dataset, _ = get_dataset("../data_configs/orbit_images_sm2.json", "../../saved_datasets")
-embeds, vals = embed("../saved_models/image_test/final_encoder.pt", dataset)
+device = get_device()
+
+dataset, _ = get_dataset("../data_configs/orbit_images_medxl.json", "../../saved_datasets")
+#dataset, _ = get_dataset("../data_configs/orbit_config_default.json", "../../saved_datasets")
+embeds, vals = embed("../saved_models/simsiam_imagetest/final_encoder.pt", dataset, device=device)
 
 """
 # Dim reduction (2d only).
@@ -50,7 +54,7 @@ def add_demo():
 
 def cmap_three():
     plot = VisPlot(3, num_subplots=3) # 3D plot, 2 for 2D plot
-    plot.add_with_cmap(embeds, vals, cmap="viridis", cby=["phi0", "H", "L"], size=3, outline=False)
+    plot.add_with_cmap(embeds, vals, cmap="viridis", cby=["phi0", "H", "L"], size=1.5, outline=False)
     return plot
 
 def cmap_one():

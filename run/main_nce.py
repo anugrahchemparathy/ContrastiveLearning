@@ -6,28 +6,26 @@ import numpy as np
 import os
 import shutil
 import argparse
-# import sys
-# sys.path.append('./') # now can access entire repository, (important when running locally)
-
 
 from ldcl.models import branch, predictor
 
-
-
 from ldcl.tools.seed import set_deterministic
-from ldcl.optimizers.lr_scheduler import LR_Scheduler
+from ldcl.optimizers.lr_scheduler import LR_Scheduler, get_lr_scheduler
 from ldcl.data import physics
 from ldcl.losses.nce import infoNCE, rmseNCE, normalmseNCE
-from ldcl.losses.simclr import NT_Xent_loss, infoNCE
-from ldcl.tools.device import get_device
-from ldcl.losses.simsiam import simsiam
+#from ldcl.losses.simclr import NT_Xent_loss, infoNCE
+#from ldcl.losses.simsiam import simsiam
+from ldcl.plot.plot import plot_loss
+from ldcl.tools.device import get_device, t2np
+
+import tqdm
 
 device = get_device()
 
 import pathlib
 SCRIPT_PATH = pathlib.Path(__file__).parent.resolve().as_posix() + "/" # always get this directory
 
-saved_epochs = list(range(20)) + [20,40,60,80,100,200,300,400,500,1000,1500]
+saved_epochs = list(range(20)) + [20,40,60,80,100,200,300,400,500,1000,1400]
 
 def training_loop(args):
 
@@ -39,8 +37,6 @@ def training_loop(args):
     save_progress_path = os.path.join(SCRIPT_PATH, "saved_models", args.fname)
     os.mkdir(save_progress_path)
 
-    # dataloader_kwargs = dict(drop_last=True, pin_memory=True, num_workers=16)
-    dataloader_kwargs = {}
     data_config_file = "data_configs/" + args.data_config
 
     train_orbits_dataset, folder = physics.get_dataset(data_config_file, "../saved_datasets")
@@ -53,76 +49,55 @@ def training_loop(args):
     )
 
     #encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=True)
-    encoder = branch.branchImageEncoder(encoder_out=3)
     # encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=False, activation= nn.Sigmoid())
-    torch.save(encoder, os.path.join(save_progress_path, 'start_encoder.pt'))
-    # if args.projhead:
-    #     torch.save(proj_head, os.path.join(save_progress_path, 'start_projector.pt'))
+    encoder = branch.branchImageEncoder(encoder_out=3)
 
-    custom_parameters = [{
-            'name': 'base',
-            'params': encoder.parameters(),
-            'lr': args.lr
-        }]
-    optimizer = torch.optim.SGD(custom_parameters, lr=args.lr, momentum=0.9, weight_decay=args.wd)
-    lr_scheduler = LR_Scheduler(
-        optimizer=optimizer,
-        warmup_epochs=args.warmup_epochs,
-        warmup_lr=0,
-        num_epochs=args.epochs,
-        base_lr=args.lr * args.bsz / 256,
-        final_lr=0,
-        iter_per_epoch=len(train_orbits_loader),
-        constant_predictor_lr=True
-    )  
+    model = branch.sslModel(encoder=encoder)
+    model.to(device)
+    model.save(save_progress_path, 'start')
 
-    # helpers
-    def get_z(x):
-        out = encoder(x.float())
-        return out
+    optimizer = torch.optim.SGD(model.params(args.lr), lr=args.lr, momentum=0.9, weight_decay=args.wd)
+    lr_scheduler = get_lr_scheduler(args, optimizer, train_orbits_loader)
+
     def apply_loss(z1, z2, loss_func = normalmseNCE):
         loss = 0.5 * loss_func(z1, z2) + 0.5 * loss_func(z2, z1)
         return loss
     
     losses = []
 
-    for e in range(args.epochs):
-        # main_branch.train()
+    with tqdm.trange(args.epochs) as t:
+        for e in range(args.epochs):
+            model.train()
 
-        for it, (input1, input2, y) in enumerate(train_orbits_loader):
-            encoder.zero_grad()
+            for it, (input1, input2, y) in enumerate(train_orbits_loader):
+                model.zero_grad()
 
-            # forward pass
-            # z1 = get_z(input1.cuda())
-            # z2 = get_z(input2.cuda())
-            z1 = get_z(input1)
-            z2 = get_z(input2)
+                # forward pass
+                input1 = input1.type(torch.float32).to(device)
+                input2 = input2.type(torch.float32).to(device)
+                z1 = model(input1)
+                z2 = model(input2)
 
-            loss = apply_loss(z1, z2, rmseNCE)
+                loss = apply_loss(z1, z2, rmseNCE)
 
-            # optimization step
-            loss.backward()
-            optimizer.step()
-            lr_scheduler.step()
-        
-        #print the loss of the last iteration of that epoch
-        print("epoch" + str(e) + "    loss = " + str(loss))
+                # optimization step
+                loss.backward()
+                optimizer.step()
+                lr_scheduler.step()
 
-        losses.append(loss.detach().numpy().flatten()[0])
+            losses.append(t2np(loss).flatten()[0])
 
-        if e in saved_epochs:
-            torch.save(encoder, os.path.join(save_progress_path,f'{e:02d}_encoder.pt'))
+            if e in saved_epochs:
+                model.save(save_progress_path, f'{e:02d}')
+            t.set_postfix(loss=loss.item(), loss50_avg=np.mean(np.array(losses[max(-1 * e, -50):])))
+            t.update()
 
-
-    torch.save(encoder, os.path.join(save_progress_path, 'final_encoder.pt'))
+    model.save(save_progress_path, 'final')
     losses = np.array(losses)
     np.save(os.path.join(save_progress_path, "loss.npy"), losses)
-
-    
+    plot_loss(losses, title = args.fname, save_progress_path = save_progress_path)
     
     return encoder
-
-
 
 
 if __name__ == '__main__':
@@ -134,12 +109,8 @@ if __name__ == '__main__':
     parser.add_argument('--wd', default=0.001, type=float)
     parser.add_argument('--warmup_epochs', default=5, type=int)
     parser.add_argument('--fine_tune', default=False, type=bool)
-    parser.add_argument('--projhead', default=False, type=bool)
     parser.add_argument('--fname', default='rmse_1500_a' , type = str)
     parser.add_argument('--data_config', default='orbit_config_default.json' , type = str)
 
     args = parser.parse_args()
-    #print(args.projhead)
     training_loop(args)
-
-

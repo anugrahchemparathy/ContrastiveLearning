@@ -8,7 +8,7 @@ def simsiam(za, pb):
     zi is the output of the encoder followed by the projector
     pi is the zi passed through the predictor h
     """
-    za.detach()
+    za_ = za.detach()
 
     #print(za)
     #print(pb)
@@ -16,7 +16,7 @@ def simsiam(za, pb):
 
     #pa = torch.linalg.norm(pa, dim = 1)
     pb = F.normalize(pb, dim = 1)
-    za = F.normalize(za, dim = 1)
+    za_ = F.normalize(za_, dim = 1)
     #zb = torch.linalg.norm(zb, dim = 1)
 
-    return -(pb * za).sum(dim = 1).mean()
+    return -(pb * za_).sum(dim = 1).mean()

@@ -1,7 +1,13 @@
 import numpy as np
 import torch
+import math
+import tqdm
 
-def embed(encoder_location_or_encoder, orbits_dataset):
+from ..tools.device import t2np
+
+MAX_INPUT = 1000
+
+def embed(encoder_location_or_encoder, orbits_dataset, device=None):
     """
         Embed a dataset into its representations, while also neatly packaging conserved
         quantities and inputs.
@@ -24,16 +30,23 @@ def embed(encoder_location_or_encoder, orbits_dataset):
     else:
         print("using encoder")
         branch_encoder = encoder_location_or_encoder
+    if device is not None:
+        branch_encoder.to(device)
     branch_encoder.eval()
 
     data = orbits_dataset.data
     data = data.reshape([data.shape[0] * data.shape[1]] + list(data.shape)[2:])
     data = torch.from_numpy(data)
-    encoder_outputs = branch_encoder(data.float()).detach().numpy()
-    print(encoder_outputs.shape)
+
+    data_slices = [data[MAX_INPUT * i:min(data.shape[0], MAX_INPUT * (i + 1))] for i in range(0, math.floor(data.shape[0] / MAX_INPUT) + 1)]
+    if data_slices[-1].shape[0] == 0:
+        data_slices = data_slices[:-1]
+    encoder_outputs = []
+    for dslice in tqdm.tqdm(data_slices):
+        encoder_outputs.append(t2np(branch_encoder(dslice.type(torch.float32).to(device))))
+    encoder_outputs = np.concatenate(encoder_outputs, axis=0)
 
     values = {}
-    print([x.shape for x in orbits_dataset.bundle.values()])
     for k, v in orbits_dataset.bundle.items():
         if k == "idxs_":
             continue
@@ -46,7 +59,6 @@ def embed(encoder_location_or_encoder, orbits_dataset):
 
         if v.shape[1] != encoder_outputs.shape[0] / v.shape[0]: # conserved quantities
             values[k] = np.repeat(values[k], encoder_outputs.shape[0] / v.shape[0], axis=1)
-        print(values[k].shape)
 
         values[k] = values[k].flatten()
 

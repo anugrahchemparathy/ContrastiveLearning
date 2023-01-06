@@ -43,7 +43,6 @@ class ConservationDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return self.size
-        
 
 def get_dataset(config, saved_dir, return_bundle=False):
     """
