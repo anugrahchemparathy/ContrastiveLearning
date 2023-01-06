@@ -30,6 +30,7 @@ SCRIPT_PATH = pathlib.Path(__file__).parent.resolve().as_posix() + "/" # always 
 saved_epochs = list(range(20)) + [20,40,60,80,100,200,300,400,500,1000,1400]
 
 def training_loop(args):
+    global saved_epochs
 
     """
     drop_last: drop the last non_full batch (potentially useful for training weighting etc.)
@@ -49,6 +50,9 @@ def training_loop(args):
         shuffle = True,
         batch_size = args.bsz,
     )
+
+    if args.all_epochs:
+        saved_epochs = list(range(args.epochs))
 
     #encoder = branch.branchEncoder(encoder_out=3)
     #encoder = branch.branchImageEncoder(encoder_out=3, useBatchNorm=True)
@@ -126,6 +130,7 @@ if __name__ == '__main__':
     # parser.add_argument('--fname', default='simclr_infoNCE_1hidden_head_4dim' , type = str)
     parser.add_argument('--fname', default='simsiam_test1' , type = str)
     parser.add_argument('--data_config', default='orbit_config_default.json' , type = str)
+    parser.add_argument('--all_epochs', default=False, type=bool)
 
     args = parser.parse_args()
     training_loop(args)

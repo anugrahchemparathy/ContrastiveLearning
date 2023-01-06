@@ -12,6 +12,7 @@ import shutil
 
 import matplotlib.pyplot as plt
 import torch
+import torchvision
 
 from .config import read_config
 
@@ -44,6 +45,41 @@ class ConservationDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.size
 
+class NaturalDataset(torch.utils.data.Dataset):
+    def __init__(self, dtset, sz):
+        self.data = []
+        self.target = []
+        for i in range(len(dtset)):
+            self.data.append(torchvision.transforms.ToTensor()(dtset[i][0]))
+            self.target.append(dtset[i][1])
+        self.data = torch.stack(self.data)
+        self.target = torch.IntTensor(self.target)
+        self.size = self.target.size()[0]
+        self.imgsz = sz
+
+    def __getitem__(self, idx):
+        if idx < self.size:
+            x_data = self.data[idx]
+            ts = torch.nn.Sequential(
+                torchvision.transforms.RandomResizedCrop(self.imgsz, scale=[0.2,1.0]),
+                torchvision.transforms.RandomHorizontalFlip(),
+                torchvision.transforms.RandomApply([torchvision.transforms.ColorJitter(brightness=0.4,contrast=0.4,saturation=0.4,hue=0.1)],p=0.8),
+                torchvision.transforms.RandomGrayscale(p=0.2)
+            )
+            if len(list(x_data.shape)) == 3:
+                x_view1 = torch.swapaxes(ts(x_data), 0, 2)
+                x_view2 = torch.swapaxes(ts(x_data), 0, 2)
+            else:
+                x_view1 = torch.swapaxes(ts(x_data), 1, 3)
+                x_view2 = torch.swapaxes(ts(x_data), 1, 3)
+
+            return [x_view1,x_view2, self.target[idx]]
+        else:
+            raise ValueError
+        
+    def __len__(self):
+        return self.size
+
 def get_dataset(config, saved_dir, return_bundle=False):
     """
         General dataset generation.
@@ -53,6 +89,31 @@ def get_dataset(config, saved_dir, return_bundle=False):
         :param config: Configuration file to receive parameters in, or already parsed configuration object.
         :return: Dataset object, and then name of folder inside saved_dir where data can be found
     """
+    if "cifar10" in config or "cifar100" in config:
+        return get_natural_dataset(config)
+    else:
+        return get_conservation_dataset(config, saved_dir, return_bundle)
+
+def get_natural_dataset(config):
+    if "train" in config:
+        train = True
+    elif "test" in config:
+        train = False
+    else:
+        raise ValueError('train or test')
+
+    if "cifar100" in config:
+        dataset = torchvision.datasets.CIFAR100("../saved_datasets", download=True, train=train)
+        dsname = "cifar100"
+    elif "cifar10" in config:
+        dataset = torchvision.datasets.CIFAR10("../saved_datasets", download=True, train=train)
+        dsname = "cifar10"
+    else:
+        raise NotImplementedError
+
+    return NaturalDataset(dataset, sz=224), dsname + "_train" if train else "_test"
+
+def get_conservation_dataset(config, saved_dir, return_bundle=False):
     if isinstance(config, str):
         config = read_config(config)
     #print(saved_dir)

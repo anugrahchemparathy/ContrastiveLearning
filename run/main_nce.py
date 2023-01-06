@@ -28,6 +28,7 @@ SCRIPT_PATH = pathlib.Path(__file__).parent.resolve().as_posix() + "/" # always 
 saved_epochs = list(range(20)) + [20,40,60,80,100,200,300,400,500,1000,1400]
 
 def training_loop(args):
+    global saved_epochs
 
     """
     drop_last: drop the last non_full batch (potentially useful for training weighting etc.)
@@ -48,10 +49,13 @@ def training_loop(args):
         batch_size = args.bsz,
     )
 
+    if args.all_epochs:
+        saved_epochs = list(range(args.epochs))
+
     #encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=True)
-    encoder = branch.branchEncoder(encoder_out=3)
+    #encoder = branch.branchEncoder(encoder_out=3)
     # encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=False, activation= nn.Sigmoid())
-    #encoder = branch.branchImageEncoder(encoder_out=3)
+    encoder = branch.branchImageEncoder(encoder_out=3)
 
     model = branch.sslModel(encoder=encoder)
     model.to(device)
@@ -66,7 +70,7 @@ def training_loop(args):
     
     losses = []
 
-    with tqdm.trange(args.epochs) as t:
+    with tqdm.trange(args.epochs * len(train_orbits_loader)) as t:
         for e in range(args.epochs):
             model.train()
 
@@ -86,12 +90,12 @@ def training_loop(args):
                 optimizer.step()
                 lr_scheduler.step()
 
-            losses.append(t2np(loss).flatten()[0])
+                losses.append(t2np(loss).flatten()[0])
 
-            if e in saved_epochs:
-                model.save(save_progress_path, f'{e:02d}')
-            t.set_postfix(loss=loss.item(), loss50_avg=np.mean(np.array(losses[max(-1 * e, -50):])))
-            t.update()
+                if e in saved_epochs and it == 0:
+                    model.save(save_progress_path, f'{e:02d}')
+                t.set_postfix(loss=loss.item(), loss50_avg=np.mean(np.array(losses[max(-1 * e, -50):])))
+                t.update()
 
     model.save(save_progress_path, 'final')
     losses = np.array(losses)
@@ -112,6 +116,7 @@ if __name__ == '__main__':
     parser.add_argument('--fine_tune', default=False, type=bool)
     parser.add_argument('--fname', default='rmse_1500_a' , type = str)
     parser.add_argument('--data_config', default='orbit_config_default.json' , type = str)
+    parser.add_argument('--all_epochs', default=False, type=bool)
 
     args = parser.parse_args()
     training_loop(args)

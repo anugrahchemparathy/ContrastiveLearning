@@ -21,3 +21,5 @@ run/saved_models/*
 **/*.html
 
 run/Ignore*.ipynb
+
+run/visualizations/train_progression/*.png
