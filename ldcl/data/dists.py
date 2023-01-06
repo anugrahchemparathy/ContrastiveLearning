@@ -153,6 +153,7 @@ def is_in_distribution(config_or_dist, arr):
                 dist = DefaultMunch.fromDict(value["traj_distr"], object())
 
     if dist.type == "uniform":
+        omin, omax = dist.min, dist.max
         if isinstance(dist.min, float) or isinstance(dist.min, int):
             dist.min = [dist.min]
             dist.max = [dist.max]
@@ -161,9 +162,11 @@ def is_in_distribution(config_or_dist, arr):
         dist.max = np.array(dist.max)
         ret = np.logical_and(arr > dist.min[np.newaxis, :], arr < dist.max[np.newaxis, :])
         ret = np.all(ret, axis=1)
+        dist.min, dist.max = omin, omax
     elif dist.type == "uniform_with_intervals":
         ret = in_intervals(dist, arr)
     elif dist.type == "exponential":
+        oshift, oscale = dist.shift, dist.scale
         if isinstance(dist.shift, float) or isinstance(dist.shift, int):
             dist.shift = [dist.shift]
             dist.scale = [dist.scale]
@@ -171,6 +174,7 @@ def is_in_distribution(config_or_dist, arr):
         dist.shift = np.array(dist.shift)
         dist.scale = np.array(dist.scale)
         ret = np.all(np.logical_and(arr > dist.shift[np.newaxis, :], arr < (dist.shift[np.newaxis, :] + dist.scale[np.newaxis, :])), axis=1)
+        dist.shift, dist.scale = oshift, oscale
     elif dist.type == "stack":
         if dist.reorder_axes != None:
             inverted = [dist.reorder_axes.index(i) for i in range(len(dist.reorder_axes))]
@@ -215,3 +219,25 @@ def is_in_distribution(config_or_dist, arr):
 
     return ret
 
+def indistribution_noise(vals, dist, noise, repeat=1):
+    """
+        Adds noise to values while keeping them in-distribution.
+    """
+    
+    ret = []
+    for _ in range(repeat):
+        nse = np.zeros(vals.shape)
+        done = np.full(vals.shape, False)
+        while not np.all(done):
+            cand = noise * rng.standard_normal(size=vals.shape)
+            mask = is_in_distribution(dist, vals + cand)
+            if len(vals.shape) > 1:
+                mask = np.repeat(mask[:, np.newaxis], vals.shape[1], axis=1)
+            cand = np.where(mask, cand, np.zeros(vals.shape))
+
+            nse = np.where(done, nse, nse + cand)
+            done = np.logical_or(done, mask)
+
+        ret.append(nse)
+
+    return np.stack(ret, axis=-1)

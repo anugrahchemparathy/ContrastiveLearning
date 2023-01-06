@@ -40,7 +40,7 @@ def training_loop(args):
     data_config_file = "data_configs/" + args.data_config
 
     train_orbits_dataset, folder = physics.get_dataset(data_config_file, "../saved_datasets")
-    print(f"Using dataset {folder}...")
+    #print(f"Using dataset {folder}...")
     shutil.copy(data_config_file, os.path.join(save_progress_path, "data_config.json"))
     train_orbits_loader = torch.utils.data.DataLoader(
         dataset = train_orbits_dataset,
@@ -49,8 +49,9 @@ def training_loop(args):
     )
 
     #encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=True)
+    encoder = branch.branchEncoder(encoder_out=3)
     # encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=False, activation= nn.Sigmoid())
-    encoder = branch.branchImageEncoder(encoder_out=3)
+    #encoder = branch.branchImageEncoder(encoder_out=3)
 
     model = branch.sslModel(encoder=encoder)
     model.to(device)

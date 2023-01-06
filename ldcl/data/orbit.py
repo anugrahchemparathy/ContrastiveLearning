@@ -2,7 +2,7 @@ import numpy as np
 import copy
 from PIL import Image
 
-from .dists import sample_distribution
+from .dists import sample_distribution, indistribution_noise
 from .config import read_config
 
 MAX_ITERATIONS = 100
@@ -55,7 +55,8 @@ def orbits_num_gen(config):
             t = np.stack(tuple([t + i * factor for i in range(0, config.orbits_imagen_settings.num_pts)]), axis=-1)
 
         all_conserved = sample_distribution(settings.traj_distr, settings.num_trajs)
-        H, L, phi0 = tuple([all_conserved[..., i][..., np.newaxis] for i in range(3)])
+        noise = indistribution_noise(all_conserved, settings.traj_distr, settings.noise, repeat=settings.num_ts) 
+        H, L, phi0 = tuple([all_conserved[..., i, np.newaxis] + noise[..., i, :] for i in range(3)])
 
         if config.modality == "image":
             H, L, phi0 = H[..., np.newaxis], L[..., np.newaxis], phi0[..., np.newaxis]
@@ -82,9 +83,9 @@ def orbits_num_gen(config):
     c, s = np.cos(phi0), np.sin(phi0)
 
     if config.modality == "image":
-        R = np.stack((c, -s, s, c), axis=-1).reshape(-1, 1, 1, 2, 2)
+        R = np.stack((c, -s, s, c), axis=-1).reshape(-1, settings.num_ts, 1, 2, 2)
     else:
-        R = np.stack((c, -s, s, c), axis=-1).reshape(-1, 1, 2, 2)
+        R = np.stack((c, -s, s, c), axis=-1).reshape(-1, settings.num_ts, 2, 2)
     vel = np.squeeze(R @ np.expand_dims(vel, axis=-1), axis=-1)  # rotated by phi0
 
     data = np.concatenate((pos, vel), axis=-1)
@@ -107,10 +108,7 @@ def orbits_num_gen(config):
     if settings.shuffle:
         for x in data:
             rng.shuffle(x, axis=0)
-
-    if settings.noise > 0:
-        data += settings.noise * rng.standard_normal(size=data.shape)
-
+    
     return {
         "phi0": phi0,
         "H": H,
@@ -186,89 +184,6 @@ def orbits_img_gen(config, bundle):
         print(f"Invisible handling: {settings.not_visible}. {num_na} out of {config.orbit_settings.num_trajs * config.orbit_settings.num_ts * settings.num_pts} points are invisible.")
     
     return new_bundle
-
-    """
-
-    data_size = bundle["data"].shape[0]
-    traj_samples = bundle["data"].shape[1]
-    q = bundle["data"][..., 0]
-
-    if settings.crop != 1.0: # Cropping: create "bigger" image, then crop after
-        if settings.crop_c == [-1, -1]:
-            settings.crop_c = [1 - settings.crop / 2, 1 - settings.crop / 2]
-        big_img = np.floor(settings.img_size / settings.crop + 4).astype('int32')
-        left = np.floor(settings.crop_c[0] * big_img - settings.img_size / 2)
-        top = np.floor(settings.crop_c[1] * big_img - settings.img_size / 2)
-    else:
-        big_img = settings.img_size
-
-    center_x = big_img // 2
-    center_y = big_img // 2
-    str_len = big_img - 4 - big_img // 2 - settings.bob_size
-    bob_area = (2 * settings.bob_size + 1)**2
-
-    pxls = np.ones((data_size, traj_samples, settings.img_size + 2, settings.img_size + 2, 3))
-    if config.verbose:
-        print("[Dataset] Blank images created")
-
-    x = center_x + np.round(np.cos(q) * str_len)
-    y = center_y + np.round(np.sin(q) * str_len)
-    
-    idx = np.indices((data_size, traj_samples))
-    idx = np.expand_dims(idx, [0, 1, 5])
-
-    bob_idx = np.indices((2 * settings.bob_size + 1, 2 * settings.bob_size + 1)) - settings.bob_size
-    bob_idx = np.swapaxes(bob_idx, 0, 2)
-    bob_idx = np.expand_dims(bob_idx, [3, 4, 5])
-
-    pos = np.expand_dims(np.stack((x, y), axis=0), [0, 1])
-    pos = pos + bob_idx
-    pos = np.reshape(pos, (bob_area, 2, data_size, traj_samples, 2))
-    pos = np.expand_dims(pos, 0)
-
-    c = np.expand_dims(np.array([[1, 1], [0, 2]]), [1, 2, 3, 4])
-
-    idx, pos, c = np.broadcast_arrays(idx, pos, c)
-    c = np.expand_dims(c[:, :, 0, :, :, :], 2)
-    idx_final = np.concatenate((idx, pos, c), axis=2)
-
-    idx_final = np.swapaxes(idx_final, 0, 2)
-    idx_final = np.reshape(idx_final, (5, 4 * data_size * traj_samples * bob_area))
-    idx_final = idx_final.astype('int32')
-
-    if config.verbose:
-        print("[Dataset] Color indices computed")
-
-    if settings.crop == 1.0:
-        pxls[idx_final[0], idx_final[1], idx_final[2] + 1, idx_final[3] + 1, idx_final[4]] = 0
-    else:
-        idx_final[2] = idx_final[2] - left.astype('int32') + 1
-        idx_final[3] = idx_final[3] - top.astype('int32') + 1
-        idx_final[2] = np.maximum(idx_final[2], np.array(0))
-        idx_final[3] = np.maximum(idx_final[3], np.array(0))
-        idx_final[2] = np.minimum(idx_final[2], np.array(settings.img_size + 1))
-        idx_final[3] = np.minimum(idx_final[3], np.array(settings.img_size + 1))
-
-        pxls[idx_final[0], idx_final[1], idx_final[2], idx_final[3], idx_final[4]] = 0
-    pxls = pxls[:, :, 1:settings.img_size + 1, 1:settings.img_size + 1, :]
-
-    if settings.noise > 0:
-        pxls = pxls + settings.noise / 4 * rng.standard_normal(size=pxls.shape)
-        tint_noise = rng.uniform(- settings.noise / 8, settings.noise / 8, size=(data_size, traj_samples, 1, 1, 3))
-        pxls = pxls + tint_noise
-        pxls = np.minimum(np.ones(pxls.shape), np.maximum(np.zeros(pxls.shape), pxls))
-
-    if config.verbose:
-        print("[Dataset] Images computed")
-
-    pxls = np.swapaxes(pxls, 4, 2)
-    
-    return {
-        "k2": np.broadcast_arrays(bundle["k2"], q)[0],
-        "q": q,
-        "data": pxls
-    }
-    """
 
 """Test image generation."""
 

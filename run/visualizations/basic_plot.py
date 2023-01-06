@@ -9,9 +9,9 @@ from sklearn.decomposition import PCA
 
 device = get_device()
 
-dataset, _ = get_dataset("../data_configs/orbit_images_medxl.json", "../../saved_datasets")
-#dataset, _ = get_dataset("../data_configs/orbit_config_default.json", "../../saved_datasets")
-embeds, vals = embed("../saved_models/simsiam_imagetest/final_encoder.pt", dataset, device=device)
+#dataset, _ = get_dataset("../data_configs/orbit_images_medxl.json", "../../saved_datasets")
+dataset, _ = get_dataset("../data_configs/orbit_config_default.json", "../../saved_datasets")
+embeds, vals = embed("../saved_models/newnoise_test/final_encoder.pt", dataset, device=device)
 
 """
 # Dim reduction (2d only).
