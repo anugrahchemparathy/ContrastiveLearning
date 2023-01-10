@@ -28,3 +28,29 @@ class TopPredictor(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
+
+# for BYOL and future use
+class predictor(nn.Module):
+    def __init__(self, in_size = 3, out_size = 3, hidden_size = 64, num_layers = 3, useBatchNorm = False, activation = nn.ReLU(inplace=True), fine_tuning = False):
+        super().__init__()
+        self.num_layers = num_layers
+        self.bn = useBatchNorm
+        self.activation = activation
+
+        mlp_layers = [nn.Linear(in_size, hidden_size)]
+
+        for i in range(self.num_layers - 2):
+            if self.bn: mlp_layers.append(nn.BatchNorm1d(hidden_size))
+            mlp_layers.append(self.activation)
+            mlp_layers.append(nn.Linear(hidden_size, hidden_size))
+
+        if self.bn: mlp_layers.append(nn.BatchNorm1d(hidden_size))
+        mlp_layers.append(self.activation)
+        mlp_layers.append(nn.Linear(hidden_size, out_size))
+
+        self.net = nn.Sequential(*mlp_layers)
+
+
+    def forward(self, x):
+        return self.net(x)
