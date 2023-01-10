@@ -77,7 +77,9 @@ def training_loop(args):
   
   online_model.save(save_progress_path, 'start')
 
-  optimizer = torch.optim.SGD(online_model.params(args.lr), lr=args.lr, momentum=0.9, weight_decay=args.wd)
+  sgd_params = online_model.params(args.lr)
+  sgd_params[0]['params'] += list(predictor_network.parameters())
+  optimizer = torch.optim.SGD(sgd_params, lr=args.lr, momentum=0.9, weight_decay=args.wd)
   lr_scheduler = get_lr_scheduler(args, optimizer, train_orbits_loader)
 
   def apply_loss(z1, z2, loss_func):
