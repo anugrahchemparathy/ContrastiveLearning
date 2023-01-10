@@ -77,7 +77,7 @@ def training_loop(args):
   
   online_model.save(save_progress_path, 'start')
 
-  optimizer = torch.optim.SGD(model.params(args.lr), lr=args.lr, momentum=0.9, weight_decay=args.wd)
+  optimizer = torch.optim.SGD(online_model.params(args.lr), lr=args.lr, momentum=0.9, weight_decay=args.wd)
   lr_scheduler = get_lr_scheduler(args, optimizer, train_orbits_loader)
 
   def apply_loss(z1, z2, loss_func):
@@ -88,10 +88,10 @@ def training_loop(args):
 
   with tqdm.trange(args.epochs) as t:
     for e in range(args.epochs):
-      model.train()
+      online_model.train()
 
       for it, (input1, input2, y) in enumerate(train_orbits_loader):
-        model.zero_grad()
+        online_model.zero_grad()
 
         # forward pass
         input1 = input1.type(torch.float32).to(device)
@@ -116,12 +116,12 @@ def training_loop(args):
       losses.append(t2np(loss).flatten()[0])
 
       if e in saved_epochs:
-        model.save(save_progress_path, f'{e:02d}')
+        online_model.save(save_progress_path, f'{e:02d}')
       t.set_postfix(loss=loss.item(),
                     loss50_avg=np.mean(np.array(losses[max(-1 * e, -50):])))
       t.update()
 
-  model.save(save_progress_path, 'final')
+  online_model.save(save_progress_path, 'final')
   losses = np.array(losses)
   np.save(os.path.join(save_progress_path, "loss.npy"), losses)
   plot_loss(losses, title=args.fname, save_progress_path=save_progress_path)
@@ -139,7 +139,7 @@ if __name__ == '__main__':
   parser.add_argument('--warmup_epochs', default=5, type=int)
   parser.add_argument('--fine_tune', default=False, type=bool)
   # parser.add_argument('--fname', default='simclr_infoNCE_1hidden_head_4dim' , type = str)
-  parser.add_argument('--fname', default='simclr_1500_d', type=str)
+  parser.add_argument('--fname', default='byol_test1', type=str)
   parser.add_argument('--data_config',
                       default='orbit_config_default.json',
                       type=str)
