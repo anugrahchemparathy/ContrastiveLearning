@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from torch.cuda.amp import autocast, GradScaler
 import numpy as np
 
 import os
@@ -17,15 +18,18 @@ from ldcl.losses.nce import infoNCE, rmseNCE, normalmseNCE
 #from ldcl.losses.simsiam import simsiam
 from ldcl.plot.plot import plot_loss
 from ldcl.tools.device import get_device, t2np
+from ldcl.tools import metrics
 
 import tqdm
 
 device = get_device()
 
+scaler = GradScaler()
+
 import pathlib
 SCRIPT_PATH = pathlib.Path(__file__).parent.resolve().as_posix() + "/" # always get this directory
 
-saved_epochs = list(range(20)) + [20,40,60,80,100,200,300,400,500,1000,1400]
+saved_epochs = list(range(20)) + [20,40,60,80,100,200,300,400,500,600,700,1000,1400]
 
 def training_loop(args):
     global saved_epochs
@@ -36,18 +40,39 @@ def training_loop(args):
     num_workers: multiprocess data loading
     """
     save_progress_path = os.path.join(SCRIPT_PATH, "saved_models", args.fname)
+    while os.path.exists(save_progress_path):
+        to_del = input("Saved directory already exists. If you continue, you may erase previous training data. Press Ctrl+C to stop now. Otherwise, type 'yes' to continue:")
+        if to_del == "yes":
+            shutil.rmtree(save_progress_path)
     os.mkdir(save_progress_path)
 
     data_config_file = "data_configs/" + args.data_config
 
     train_orbits_dataset, folder = physics.get_dataset(data_config_file, "../saved_datasets")
-    #print(f"Using dataset {folder}...")
+    print(f"Using dataset {folder}...")
     shutil.copy(data_config_file, os.path.join(save_progress_path, "data_config.json"))
     train_orbits_loader = torch.utils.data.DataLoader(
         dataset = train_orbits_dataset,
-        shuffle = True,
-        batch_size = args.bsz,
+        sampler=torch.utils.data.BatchSampler(
+                torch.utils.data.RandomSampler(train_orbits_dataset), batch_size=args.bsz, drop_last=False
+            ),
     )
+
+
+    is_natural = isinstance(train_orbits_dataset, physics.NaturalDataset)
+    if is_natural:
+        train_orbits_dataset2, folder = physics.get_dataset(data_config_file, "../saved_datasets", no_aug=True)
+        train_orbits_loader2 = torch.utils.data.DataLoader(
+            dataset = train_orbits_dataset2,
+            shuffle = False,
+            batch_size = args.bsz,
+        )
+        test_orbits_dataset, folder = physics.get_dataset(data_config_file.replace("train", "test"), "../saved_datasets", no_aug=True)
+        test_orbits_loader = torch.utils.data.DataLoader(
+            dataset = test_orbits_dataset,
+            shuffle = False,
+            batch_size = args.bsz
+        )
 
     if args.all_epochs:
         saved_epochs = list(range(args.epochs))
@@ -55,7 +80,10 @@ def training_loop(args):
     #encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=True)
     #encoder = branch.branchEncoder(encoder_out=3)
     # encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=False, activation= nn.Sigmoid())
-    encoder = branch.branchImageEncoder(encoder_out=3)
+    if is_natural:
+        encoder = branch.branchImageEncoder(encoder_out=1024, useBatchNorm=True, encoder_hidden=768, num_layers=2)
+    else:
+        encoder = branch.branchImageEncoder(encoder_out=3)
 
     model = branch.sslModel(encoder=encoder)
     model.to(device)
@@ -67,10 +95,32 @@ def training_loop(args):
     def apply_loss(z1, z2, loss_func = normalmseNCE):
         loss = 0.5 * loss_func(z1, z2) + 0.5 * loss_func(z2, z1)
         return loss
-    
+
     losses = []
+    mtrd = {"loss": None, "avg_loss": None}
+    saved_metrics = {}
+
+    def update_metrics(t, new_loss=None, losses=None, do_eval=False):
+        if new_loss is not None:
+            mtrd["loss"] = new_loss
+        if losses is not None:
+            mtrd["avg_loss"] = np.mean(np.array(losses[max(-1 * len(losses), -50):]))
+
+        if do_eval:
+            for name, metric in emtrs.items():
+                new_val = metric()
+                if name in saved_metrics.keys():
+                    saved_metrics[name].append(new_val)
+                else:
+                    saved_metrics[name] = [new_val]
+                mtrd[name] = new_val
+        
+        t.set_postfix(**mtrd)
+    
+    emtrs = {} # training metrics
 
     with tqdm.trange(args.epochs * len(train_orbits_loader)) as t:
+        update_metrics(t, do_eval=True)
         for e in range(args.epochs):
             model.train()
 
@@ -78,32 +128,48 @@ def training_loop(args):
                 model.zero_grad()
 
                 # forward pass
-                input1 = input1.type(torch.float32).to(device)
-                input2 = input2.type(torch.float32).to(device)
-                z1 = model(input1)
-                z2 = model(input2)
+                input1 = input1[0].type(torch.float32).to(device)
+                input2 = input2[0].type(torch.float32).to(device)
 
-                loss = apply_loss(z1, z2, rmseNCE)
+                if args.mixed_precision:
+                    with autocast(): 
+                        z1 = model(input1)
+                        z2 = model(input2)
 
-                # optimization step
-                loss.backward()
-                optimizer.step()
+                        loss = apply_loss(z1, z2, infoNCE)
+                    scaler.scale(loss).backward()
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    z1 = model(input1)
+                    z2 = model(input2)
+
+                    loss = apply_loss(z1, z2, infoNCE)
+
+                    loss.backward()
+                    optimizer.step()
                 lr_scheduler.step()
 
                 losses.append(t2np(loss).flatten()[0])
 
                 if e in saved_epochs and it == 0:
                     model.save(save_progress_path, f'{e:02d}')
-                t.set_postfix(loss=loss.item(), loss50_avg=np.mean(np.array(losses[max(-1 * e, -50):])))
+                update_metrics(t, new_loss=loss.item(), losses=losses)
                 t.update()
+
+            if e % args.eval_every == args.eval_every - 1:
+                update_metrics(t, do_eval=True)
 
     model.save(save_progress_path, 'final')
     losses = np.array(losses)
     np.save(os.path.join(save_progress_path, "loss.npy"), losses)
+
+    for name, slist in saved_metrics.items():
+        np.save(os.path.join(save_progress_path, f"{name}.npy"), slist)
+
     plot_loss(losses, title = args.fname, save_progress_path = save_progress_path)
     
     return encoder
-
 
 if __name__ == '__main__':
     pass
@@ -117,6 +183,8 @@ if __name__ == '__main__':
     parser.add_argument('--fname', default='rmse_1500_a' , type = str)
     parser.add_argument('--data_config', default='orbit_config_default.json' , type = str)
     parser.add_argument('--all_epochs', default=False, type=bool)
+    parser.add_argument('--eval_every', default=3, type=int)
+    parser.add_argument('--mixed_precision', action='store_true')
 
     args = parser.parse_args()
     training_loop(args)

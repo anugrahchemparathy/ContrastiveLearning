@@ -1,6 +1,6 @@
 import torch
 
-def get_device(cpu_only=False):
+def get_device(cpu_only=False, idx=0):
     """
         Returns device: either CPU, CUDA (if available), or
         Metal (Apple M1 chip).
@@ -14,7 +14,10 @@ def get_device(cpu_only=False):
 
     device = None
     if torch.cuda.is_available():
-        device = torch.device("cuda:0")
+        device = torch.cuda.device(idx)
+        print('cuda workaround for now on supercloud')
+        if 'Tesla' in torch.cuda.get_device_name(idx):
+            device = 'cuda'
     else:
         try:
             if torch.backends.mps.is_available():
