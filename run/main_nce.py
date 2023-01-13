@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from torch.cuda.amp import autocast, GradScaler
 import numpy as np
 
 import os
@@ -23,6 +24,8 @@ import tqdm
 
 device = get_device()
 
+scaler = GradScaler()
+
 import pathlib
 SCRIPT_PATH = pathlib.Path(__file__).parent.resolve().as_posix() + "/" # always get this directory
 
@@ -37,6 +40,10 @@ def training_loop(args):
     num_workers: multiprocess data loading
     """
     save_progress_path = os.path.join(SCRIPT_PATH, "saved_models", args.fname)
+    while os.path.exists(save_progress_path):
+        to_del = input("Saved directory already exists. If you continue, you may erase previous training data. Press Ctrl+C to stop now. Otherwise, type 'yes' to continue:")
+        if to_del == "yes":
+            shutil.rmtree(save_progress_path)
     os.mkdir(save_progress_path)
 
     data_config_file = "data_configs/" + args.data_config
@@ -51,18 +58,19 @@ def training_loop(args):
             ),
     )
 
+
     is_natural = isinstance(train_orbits_dataset, physics.NaturalDataset)
     if is_natural:
         train_orbits_dataset2, folder = physics.get_dataset(data_config_file, "../saved_datasets", no_aug=True)
         train_orbits_loader2 = torch.utils.data.DataLoader(
             dataset = train_orbits_dataset2,
-            shuffle = True,
+            shuffle = False,
             batch_size = args.bsz,
         )
         test_orbits_dataset, folder = physics.get_dataset(data_config_file.replace("train", "test"), "../saved_datasets", no_aug=True)
         test_orbits_loader = torch.utils.data.DataLoader(
             dataset = test_orbits_dataset,
-            shuffle = True,
+            shuffle = False,
             batch_size = args.bsz
         )
 
@@ -109,13 +117,7 @@ def training_loop(args):
         
         t.set_postfix(**mtrd)
     
-    if is_natural:
-        emtrs = {
-            "knn": lambda: metrics.knn_eval(model, train_orbits_loader2, test_orbits_loader, device=device),
-            "lin": lambda: metrics.lin_eval(model, train_orbits_loader2, test_orbits_loader, device=device)
-        }
-    else:
-        emtrs = {}
+    emtrs = {} # training metrics
 
     with tqdm.trange(args.epochs * len(train_orbits_loader)) as t:
         update_metrics(t, do_eval=True)
@@ -128,14 +130,24 @@ def training_loop(args):
                 # forward pass
                 input1 = input1[0].type(torch.float32).to(device)
                 input2 = input2[0].type(torch.float32).to(device)
-                z1 = model(input1)
-                z2 = model(input2)
 
-                loss = apply_loss(z1, z2, rmseNCE)
+                if args.mixed_precision:
+                    with autocast(): 
+                        z1 = model(input1)
+                        z2 = model(input2)
 
-                # optimization step
-                loss.backward()
-                optimizer.step()
+                        loss = apply_loss(z1, z2, infoNCE)
+                    scaler.scale(loss).backward()
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    z1 = model(input1)
+                    z2 = model(input2)
+
+                    loss = apply_loss(z1, z2, infoNCE)
+
+                    loss.backward()
+                    optimizer.step()
                 lr_scheduler.step()
 
                 losses.append(t2np(loss).flatten()[0])
@@ -172,6 +184,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_config', default='orbit_config_default.json' , type = str)
     parser.add_argument('--all_epochs', default=False, type=bool)
     parser.add_argument('--eval_every', default=3, type=int)
+    parser.add_argument('--mixed_precision', action='store_true')
 
     args = parser.parse_args()
     training_loop(args)

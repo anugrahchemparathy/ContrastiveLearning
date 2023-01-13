@@ -169,6 +169,7 @@ class ResNet(nn.Module):
             norm_layer: Optional[Callable[..., nn.Module]] = None,
     ) -> None:
         super().__init__()
+        print("Note swapped channels version of x (src:resnet)")
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         self._norm_layer = norm_layer
@@ -270,7 +271,6 @@ class ResNet(nn.Module):
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         # x = self.fc(x)   # CIFAR10 modification
-        print("Note swapped channels version of x")
 
         return x
 

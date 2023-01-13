@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from torch.cuda.amp import autocast, GradScaler
 import numpy as np
 
 import os
@@ -8,7 +9,6 @@ import shutil
 import argparse
 
 from ldcl.models import branch, predictor
-from ldcl.models.main import Branch
 
 from ldcl.tools.seed import set_deterministic
 from ldcl.optimizers.lr_scheduler import LR_Scheduler, get_lr_scheduler
@@ -22,7 +22,9 @@ from ldcl.tools import metrics, utils, main
 
 import tqdm
 
-device = get_device(idx=3)
+device = get_device(idx=0)
+
+scaler = GradScaler()
 
 import pathlib
 SCRIPT_PATH = pathlib.Path(__file__).parent.resolve().as_posix() + "/" # always get this directory
@@ -79,11 +81,8 @@ def training_loop(args):
     #encoder = branch.branchEncoder(encoder_out=3, num_layers=15, useBatchNorm=True, encoder_hidden=128)
     #encoder = branch.branchEncoder(encoder_out=3)
     if is_natural:
-        #encoder = branch.branchImageEncoder(encoder_out=1024, useBatchNorm=True, encoder_hidden=768, num_layers=2)
-        #proj_head = branch.projectionHead(head_in=1024, head_out=1024, num_layers=3, hidden_size=512)
-        branchep = Branch()
-        encoder = branchep.encoder
-        proj_head = branchep.projector
+        encoder = branch.branchImageEncoder(encoder_out=1024, useBatchNorm=True, encoder_hidden=768, num_layers=2)
+        proj_head = branch.projectionHead(head_in=1024, head_out=1024, num_layers=3, hidden_size=512)
     else:
         encoder = branch.branchImageEncoder(encoder_out=3, useBatchNorm=True)
         proj_head = branch.projectionHead(head_in=3, head_out=4, num_layers=3, hidden_size=128)
@@ -123,15 +122,8 @@ def training_loop(args):
     
     if is_natural:
         emtrs = {
-            "knn_u": lambda: utils.knn_monitor(model.encoder, train_orbits_loader2, test_orbits_loader, device=str(device)),
-            "lin_u": lambda: main.eval_loop(model.encoder, train_orbits_loader2, test_orbits_loader, device=device, epochs=5)
+            "knn_u": lambda: utils.knn_monitor(model.encoder, train_orbits_loader2, test_orbits_loader, device=str(device), mp=args.mixed_precision),
         }
-        """
-            "knn": lambda: metrics.knn_eval(model, train_orbits_loader2, test_orbits_loader, device=device),
-            "lin": lambda: metrics.lin_eval(model, train_orbits_loader2, test_orbits_loader, device=device),
-            "knn_v": lambda: metrics.knn_eval(model, train_orbits_loader2, train_orbits_loader2, device=device),
-            "lin_v": lambda: metrics.lin_eval(model, train_orbits_loader2, train_orbits_loader2, device=device),
-        """
     else:
         emtrs = {}
 
@@ -146,14 +138,24 @@ def training_loop(args):
                 # forward pass
                 input1 = input1[0].type(torch.float32).to(device)
                 input2 = input2[0].type(torch.float32).to(device)
-                z1 = model(input1)
-                z2 = model(input2)
 
-                loss = apply_loss(z1, z2, infoNCE)
+                if args.mixed_precision:
+                    with autocast(): 
+                        z1 = model(input1)
+                        z2 = model(input2)
 
-                # optimization step
-                loss.backward()
-                optimizer.step()
+                        loss = apply_loss(z1, z2, infoNCE)
+                    scaler.scale(loss).backward()
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    z1 = model(input1)
+                    z2 = model(input2)
+
+                    loss = apply_loss(z1, z2, infoNCE)
+
+                    loss.backward()
+                    optimizer.step()
                 lr_scheduler.step()
 
                 losses.append(t2np(loss).flatten()[0])
@@ -191,6 +193,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_config', default='orbit_config_default.json' , type = str)
     parser.add_argument('--all_epochs', default=False, type=bool)
     parser.add_argument('--eval_every', default=3, type=int)
+    parser.add_argument('--mixed_precision', action='store_true')
 
     args = parser.parse_args()
     training_loop(args)

@@ -20,8 +20,8 @@ def adjust_learning_rate(epochs, warmup_epochs, base_lr, optimizer, loader, step
         param_group['lr'] = lr
     return lr
 
-def eval_loop(encoder, train_loader, test_loader, ind=None, fp16=False, do_print=False, device=None, epochs=100):
-    classifier = nn.Linear(1024, 10).to(device)
+def eval_loop(encoder, train_loader, test_loader, ind=None, do_print=False, device=None, epochs=100, mp=False):
+    classifier = nn.Linear(512, 10).to(device)
     optimizer = torch.optim.SGD(
         classifier.parameters(),
         momentum=0.9,
@@ -58,7 +58,7 @@ def eval_loop(encoder, train_loader, test_loader, ind=None, fp16=False, do_print
                 return loss
 
             # optimization step
-            if fp16:
+            if mp:
                 with autocast():
                     loss = forward_step()
                 scaler.scale(loss).backward()
@@ -69,12 +69,12 @@ def eval_loop(encoder, train_loader, test_loader, ind=None, fp16=False, do_print
                 loss.backward()
                 optimizer.step()
 
-        if e % 10 == 0:
+        if e % 10 == 0 or e == epochs:
             accs = []
             classifier.eval()
             for idx, (images, _, labels) in enumerate(test_loader):
                 with torch.no_grad():
-                    if fp16:
+                    if mp:
                         with autocast():
                             b = encoder(images.to(device))
                             preds = classifier(b).argmax(dim=1)

@@ -2,7 +2,7 @@ import torch.nn.functional as F
 import torch
 import random
 import numpy as np
-
+from torch.cuda.amp import autocast, GradScaler
 
 def fix_seed(seed):
     random.seed(seed)
@@ -19,7 +19,7 @@ def fix_seed(seed):
 
 # test using a knn monitor
 def knn_monitor(net, memory_data_loader, test_data_loader, device='cuda', k=200, t=0.1, hide_progress=False,
-                targets=None):
+                targets=None, mp=False):
     if not targets:
         targets = memory_data_loader.dataset[:][2]#.dataset.targets
     net.eval()
@@ -28,7 +28,13 @@ def knn_monitor(net, memory_data_loader, test_data_loader, device='cuda', k=200,
     with torch.no_grad():
         # generate feature bank
         for data, _, target in memory_data_loader:
-            feature = net(data.to(device=device, non_blocking=True))
+            if mp:
+                with autocast():
+                    feature = net(data.to(device=device, non_blocking=True))
+                feature = feature.to(torch.float)
+            else:
+                feature = net(data.to(device=device, non_blocking=True))
+
             feature = F.normalize(feature, dim=1)
             feature_bank.append(feature)
         # [D, N]
