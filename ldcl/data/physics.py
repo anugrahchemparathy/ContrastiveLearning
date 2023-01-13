@@ -9,6 +9,7 @@ import glob
 import os
 from pathlib import Path
 import shutil
+from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 import torch
@@ -46,41 +47,65 @@ class ConservationDataset(torch.utils.data.Dataset):
         return self.size
 
 class NaturalDataset(torch.utils.data.Dataset):
-    def __init__(self, dtset, sz):
+    def __init__(self, dtset, sz, no_aug=False):
         self.data = []
-        self.target = []
+        self.targets = []
         for i in range(len(dtset)):
             self.data.append(torchvision.transforms.ToTensor()(dtset[i][0]))
-            self.target.append(dtset[i][1])
+            self.targets.append(dtset[i][1])
         self.data = torch.stack(self.data)
-        self.target = torch.IntTensor(self.target)
-        self.size = self.target.size()[0]
+        self.targets = torch.IntTensor(self.targets)
+        self.size = self.targets.size()[0]
         self.imgsz = sz
+        self.classes = dtset.classes
 
-    def __getitem__(self, idx):
-        if idx < self.size:
-            x_data = self.data[idx]
-            ts = torch.nn.Sequential(
+        if not no_aug:
+            self.ts = torch.nn.Sequential(
                 torchvision.transforms.RandomResizedCrop(self.imgsz, scale=[0.2,1.0]),
                 torchvision.transforms.RandomHorizontalFlip(),
                 torchvision.transforms.RandomApply([torchvision.transforms.ColorJitter(brightness=0.4,contrast=0.4,saturation=0.4,hue=0.1)],p=0.8),
                 torchvision.transforms.RandomGrayscale(p=0.2)
             )
-            if len(list(x_data.shape)) == 3:
-                x_view1 = torch.swapaxes(ts(x_data), 0, 2)
-                x_view2 = torch.swapaxes(ts(x_data), 0, 2)
-            else:
-                x_view1 = torch.swapaxes(ts(x_data), 1, 3)
-                x_view2 = torch.swapaxes(ts(x_data), 1, 3)
-
-            return [x_view1,x_view2, self.target[idx]]
         else:
-            raise ValueError
+            self.ts = lambda x: x
+
+    def __getitem__(self, idx, show_images=False):
+        x_data = self.data[idx]
         
+        #x_data = x_data.to('cuda')
+
+        x_view1 = self.ts(x_data) 
+        x_view2 = self.ts(x_data) 
+
+        #x_view1 = x_view1.to('cpu')
+        #x_view2 = x_view2.to('cpu')
+
+        if x_view1.dim() == 3:
+            x_view1 = torch.swapaxes(x_view1, 0, 2)
+            x_view2 = torch.swapaxes(x_view2, 0, 2)
+        elif x_view1.dim() == 4:
+            x_view1 = torch.swapaxes(x_view1, 1, 3)
+            x_view2 = torch.swapaxes(x_view2, 1, 3)
+
+        if show_images:
+            img1 = torchvision.transforms.ToPILImage()(torch.swapaxes(x_view1,0,2))
+            img2 = torchvision.transforms.ToPILImage()(torch.swapaxes(x_view2,0,2))
+            if torch.numel(self.targets[idx]) == 1:
+                target_ = self.targets[idx].item()
+            else:
+                target_ = self.targets[idx][0]
+            new_image = Image.new('RGB',(2 * self.imgsz, self.imgsz))
+            new_image.paste(img1,(0,0))
+            new_image.paste(img2,(self.imgsz,0))
+            new_image.save(f"example-{target_}.png")
+            input('Check saved image...')
+
+        return [x_view1,x_view2, self.targets[idx]]
+
     def __len__(self):
         return self.size
 
-def get_dataset(config, saved_dir, return_bundle=False):
+def get_dataset(config, saved_dir, return_bundle=False, no_aug=False):
     """
         General dataset generation.
 
@@ -90,11 +115,11 @@ def get_dataset(config, saved_dir, return_bundle=False):
         :return: Dataset object, and then name of folder inside saved_dir where data can be found
     """
     if "cifar10" in config or "cifar100" in config:
-        return get_natural_dataset(config)
+        return get_natural_dataset(config, no_aug=no_aug)
     else:
         return get_conservation_dataset(config, saved_dir, return_bundle)
 
-def get_natural_dataset(config):
+def get_natural_dataset(config, no_aug=False):
     if "train" in config:
         train = True
     elif "test" in config:
@@ -111,7 +136,7 @@ def get_natural_dataset(config):
     else:
         raise NotImplementedError
 
-    return NaturalDataset(dataset, sz=224), dsname + "_train" if train else "_test"
+    return NaturalDataset(dataset, sz=32, no_aug=no_aug), dsname + "_train" if train else "_test"
 
 def get_conservation_dataset(config, saved_dir, return_bundle=False):
     if isinstance(config, str):
