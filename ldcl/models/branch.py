@@ -4,6 +4,8 @@ import torch.nn as nn
 import torchvision
 import os
 
+from .resnet import resnet18
+
 class sslModel(nn.Module):
     def __init__(self, encoder=None, projector=None, predictor=None):
         super().__init__()
@@ -67,7 +69,8 @@ class branchImageEncoder(nn.Module):
         self.num_layers = num_layers
         self.bn = useBatchNorm
         self.activation = activation
-        self.encoder = torchvision.models.resnet18(weights=None)
+        #self.encoder = torchvision.models.resnet18(weights=None)
+        self.encoder = resnet18()
 
         encoder_layers = [nn.Linear(512,encoder_hidden)]
 
