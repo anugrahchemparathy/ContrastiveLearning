@@ -186,6 +186,8 @@ if __name__ == '__main__':
     parser.add_argument('--all_epochs', default=False, type=bool)
     parser.add_argument('--eval_every', default=3, type=int)
     parser.add_argument('--mixed_precision', action='store_true')
+    parser.add_argument('--device', default=0, type=int)
 
     args = parser.parse_args()
+    device = get_device(args.device)
     training_loop(args)

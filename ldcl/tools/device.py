@@ -14,10 +14,12 @@ def get_device(cpu_only=False, idx=0):
 
     device = None
     if torch.cuda.is_available():
-        device = torch.cuda.device(idx)
+        device = torch.device(f"cuda:{idx}")
+        """
         print('cuda workaround for now on supercloud')
         if 'Tesla' in torch.cuda.get_device_name(idx):
             device = 'cuda'
+        """
     else:
         try:
             if torch.backends.mps.is_available():
