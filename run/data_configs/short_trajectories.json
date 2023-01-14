@@ -5,7 +5,7 @@
     "verbose": "True",
     "orbit_settings": {
         "mu": 1.0,
-        "num_trajs": 1000,
+        "num_trajs": 10240,
         "num_ts": 10,
         "traj_distr": {
             "type": "uniform",
@@ -22,7 +22,8 @@
         "noise": 0,
         "pq_resample_condition": "None",
         "shuffle": "True",
-        "check": "False"
+        "check": "False",
+        "traj_range": 0.01
     },
     "pendulum_imagen_settings": {
         "noise": 0,

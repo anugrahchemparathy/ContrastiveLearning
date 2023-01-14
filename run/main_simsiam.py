@@ -84,7 +84,8 @@ def training_loop(args):
         proj_head = branch.projectionHead(head_in=1024, head_out=1024, useBatchNorm=True, hidden_size=512, num_layers=3)
         predictor = branch.predictor(size=1024, hidden_size=512, useBatchNorm=True, num_layers=3)
     else:
-        encoder = branch.branchImageEncoder(encoder_out=3, useBatchNorm=True)
+        #encoder = branch.branchImageEncoder(encoder_out=3, useBatchNorm=True)
+        encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=True)
         proj_head = branch.projectionHead(head_in=3, head_out=4, useBatchNorm=True, num_layers=3)
         predictor = branch.predictor(size=4, hidden_size=4, useBatchNorm=True, num_layers=3)
 
@@ -143,7 +144,7 @@ def training_loop(args):
                         z1 = model(input1)
                         z2 = model(input2)
 
-                        loss = apply_loss(z1, z2, infoNCE)
+                        loss = apply_loss(z1, z2, simsiam)
                     scaler.scale(loss).backward()
                     scaler.step(optimizer)
                     scaler.update()
@@ -151,7 +152,7 @@ def training_loop(args):
                     z1 = model(input1)
                     z2 = model(input2)
 
-                    loss = apply_loss(z1, z2, infoNCE)
+                    loss = apply_loss(z1, z2, simsiam)
 
                     loss.backward()
                     optimizer.step()

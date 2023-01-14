@@ -11,7 +11,7 @@ device = get_device()
 
 #dataset, _ = get_dataset("../data_configs/orbit_images_medxl.json", "../../saved_datasets")
 dataset, _ = get_dataset("../data_configs/orbit_config_default.json", "../../saved_datasets")
-embeds, vals = embed("../saved_models/supervised_test/final_encoder.pt", dataset, device=device)
+embeds, vals = embed("../saved_models/short_traj_test2/final_encoder.pt", dataset, device=device)
 
 """
 # Dim reduction (2d only).
@@ -37,13 +37,13 @@ def add_demo():
 
     # Note that a list of sizes can be passed in too.
 
-    plot.add(oneD_span_embeds, 
-        size=2, 
-        color=oneD_span_colors, 
+    plot.add(oneD_span_embeds,
+        size=2,
+        color=oneD_span_colors,
         label=oneD_span_vals, outline=False)
-    plot.add(single_orbit_embeds, 
-        size=4, 
-        color=single_orbit_colors, 
+    plot.add(single_orbit_embeds,
+        size=4,
+        color=single_orbit_colors,
         label=single_orbit_vals, outline=False)
 
     return plot
@@ -54,7 +54,7 @@ def add_demo():
 
 def cmap_three():
     plot = VisPlot(3, num_subplots=3) # 3D plot, 2 for 2D plot
-    plot.add_with_cmap(embeds, vals, cmap="viridis", cby=["phi0", "H", "L"], size=1.5, outline=False)
+    plot.add_with_cmap(embeds, vals, cmap=["hsv", "viridis", "viridis"], cby=["phi0", "H", "L"], size=1.5, outline=False)
     return plot
 
 def cmap_one():

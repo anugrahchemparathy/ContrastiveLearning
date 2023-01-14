@@ -137,7 +137,7 @@ def training_loop(args):
                         z1 = model(input1)
                         z2 = model(input2)
 
-                        loss = apply_loss(z1, z2, infoNCE)
+                        loss = apply_loss(z1, z2, rmseNCE)
                     scaler.scale(loss).backward()
                     scaler.step(optimizer)
                     scaler.update()
@@ -145,7 +145,7 @@ def training_loop(args):
                     z1 = model(input1)
                     z2 = model(input2)
 
-                    loss = apply_loss(z1, z2, infoNCE)
+                    loss = apply_loss(z1, z2, rmseNCE)
 
                     loss.backward()
                     optimizer.step()
@@ -169,7 +169,7 @@ def training_loop(args):
         np.save(os.path.join(save_progress_path, f"{name}.npy"), slist)
 
     plot_loss(losses, title = args.fname, save_progress_path = save_progress_path)
-    
+     
     return encoder
 
 if __name__ == '__main__':

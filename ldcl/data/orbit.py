@@ -48,14 +48,8 @@ def orbits_num_gen(config):
 
     E = None
     while E is None:
-        t = sample_distribution(settings.t_distr, settings.num_trajs * settings.num_ts).reshape((settings.num_trajs, settings.num_ts))
-        if config.modality == "image":
-            #t = np.stack((t, t + config.pendulum_imagen_settings.diff_time), axis=-1) # time steps
-            factor = config.orbits_imagen_settings.diff_time / config.orbits_imagen_settings.num_pts
-            t = np.stack(tuple([t + i * factor for i in range(0, config.orbits_imagen_settings.num_pts)]), axis=-1)
-
         all_conserved = sample_distribution(settings.traj_distr, settings.num_trajs)
-        noise = indistribution_noise(all_conserved, settings.traj_distr, settings.noise, repeat=settings.num_ts) 
+        noise = indistribution_noise(all_conserved, settings.traj_distr, settings.noise, repeat=settings.num_ts)
         H, L, phi0 = tuple([all_conserved[..., i, np.newaxis] + noise[..., i, :] for i in range(3)])
 
         if config.modality == "image":
@@ -66,8 +60,21 @@ def orbits_num_gen(config):
 
         # https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vector/.pdf
         T = 2 * np.pi * np.sqrt(a ** 3 / mu)  # period
+
+        if not isinstance(settings.traj_range, float):
+            t = sample_distribution(settings.t_distr, settings.num_trajs * settings.num_ts).reshape((settings.num_trajs, settings.num_ts))
+        else:
+            t = np.repeat(sample_distribution(settings.t_distr, settings.num_trajs)[:, np.newaxis], settings.num_ts, axis=1)
+            lim = T * settings.traj_range
+            eps = rng.uniform(size=(settings.num_trajs, settings.num_ts)) * lim
+            t = t + eps
+
+        if config.modality == "image":
+            factor = config.orbits_imagen_settings.diff_time / config.orbits_imagen_settings.num_pts
+            t = np.stack(tuple([t + i * factor for i in range(0, config.orbits_imagen_settings.num_pts)]), axis=-1)
+
         M = np.fmod(2 * np.pi * t / T, 2 * np.pi)  # mean anomaly
-        
+
         try:
             E = eccentric_anomaly_from_mean(e, M)  # eccentric anomaly
         except:
@@ -108,7 +115,7 @@ def orbits_num_gen(config):
     if settings.shuffle:
         for x in data:
             rng.shuffle(x, axis=0)
-    
+
     return {
         "phi0": phi0,
         "H": H,
@@ -150,7 +157,7 @@ def orbits_img_gen(config, bundle):
     else:
         cols = np.array([1])[:, np.newaxis] * (end - start)[np.newaxis, :]
         print("only one point??")
-    
+
     num_na = 0
     for traj in range(config.orbit_settings.num_trajs):
         for t in range(config.orbit_settings.num_ts):
@@ -159,7 +166,7 @@ def orbits_img_gen(config, bundle):
                     num_na += 1
                     continue
 
-                ratio = np.full((2, 2), 1.0) # calculate ratio to add new color 
+                ratio = np.full((2, 2), 1.0) # calculate ratio to add new color
                 ratio[:, 0] = ratio[:, 0] * frac[traj, t, p, 1]
                 ratio[:, 1] = ratio[:, 1] * (1 - frac[traj, t, p, 1])
                 ratio[0, :] = ratio[0, :] * frac[traj, t, p, 0]
@@ -182,13 +189,13 @@ def orbits_img_gen(config, bundle):
 
     if settings.not_visible == "do_nothing":
         print(f"Invisible handling: {settings.not_visible}. {num_na} out of {config.orbit_settings.num_trajs * config.orbit_settings.num_ts * settings.num_pts} points are invisible.")
-    
+
     return new_bundle
 
 """Test image generation."""
 
 """
-config = read_config("image_gen_test.json")
+#config = read_config("image_gen_test.json")
 
 #bundle = orbits_img_gen(config, {
 #    "data": np.array([[-1.0,1.0,0.0,0.0], [0.0,0.0,0.0,0.0]])[np.newaxis, np.newaxis, :, :]

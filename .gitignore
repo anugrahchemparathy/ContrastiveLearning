@@ -23,3 +23,5 @@ run/saved_models/*
 run/Ignore*.ipynb
 
 run/visualizations/train_progression/*.png
+
+.idea/
