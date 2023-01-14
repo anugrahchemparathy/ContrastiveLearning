@@ -23,7 +23,7 @@
         "pq_resample_condition": "None",
         "shuffle": "True",
         "check": "False",
-        "traj_range": 0.01
+        "traj_range": 0.05
     },
     "pendulum_imagen_settings": {
         "noise": 0,

@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 
 def get_cmap(cmap, normalize=True):
@@ -13,18 +14,21 @@ def get_cmap(cmap, normalize=True):
 
     def blank(x): # transparent
         return np.zeros((np.size(x), 4))
-    
+
     func = None # the color map
     if cmap == "blank":
         func = blank
     else:
-        func = plt.get_cmap(cmap, 512)
+        try:
+            func = plt.get_cmap(cmap, 512)
+        except:
+            func = sns.color_palette(cmap, 512, as_cmap=True)
 
     def normalize_wrap(x):
         x = x - np.min(x)
 
         if np.max(x) < 1e-12: # the values are probably all zero
-            return np.full(np.shape(x), 0.5) 
+            return np.full(np.shape(x), 0.5)
         else:
             x = x / np.max(x)
             return x
