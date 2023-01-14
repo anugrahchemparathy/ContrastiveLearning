@@ -31,17 +31,18 @@ class ConservationDataset(torch.utils.data.Dataset):
         self.bundle = bundle
 
     def __getitem__(self, idx):
-        if idx < self.size:
-            x_data = self.data[idx]
-            random_x_rows = np.random.randint(0,x_data.shape[0],2) # generate two different views
+        x_data = self.data[idx]
+        if isinstance(idx, int):
+            x_data = torch.unsqueeze(x_data, 0)
+        random_x_rows = np.random.randint(0,x_data.shape[1],size=(x_data.shape[0], 2)) # generate two different views
 
-            x_output = x_data[random_x_rows]
-            x_view1 = x_output[0]
-            x_view2 = x_output[1]
+        indexer = np.repeat(np.arange(x_data.shape[0])[:, np.newaxis], 2, axis=1)
+        x_output = x_data[indexer, random_x_rows]
+        print(x_output.shape)
+        x_view1 = x_output[:, 0]
+        x_view2 = x_output[:, 1]
 
-            return [x_view1,x_view2, {k: v[idx] for k, v in self.bundle.items()} | {"idxs_": random_x_rows}]
-        else:
-            raise ValueError
+        return [x_view1,x_view2, {k: v[idx] for k, v in self.bundle.items()} | {"idxs_": random_x_rows}]
 
     def __len__(self):
         return self.size
