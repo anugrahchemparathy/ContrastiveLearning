@@ -20,8 +20,7 @@ def fix_seed(seed):
 # ipynb#scrollTo=RI1Y8bSImD7N
 
 # test using a knn monitor
-def knn_eval(model, traind, testd, k=200, device=torch.device('cpu'), swapc=False):
-                targets=None, mp=False):
+def knn_eval(model, traind, testd, k=200, device=torch.device('cpu'), swapc=False, mp=False):
     if not targets:
         targets = memory_data_loader.dataset[:][2]#.dataset.targets
     net.eval()
