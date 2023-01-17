@@ -38,9 +38,7 @@ def eccentric_anomaly_from_mean(e, M, tol=1e-13):
 def orbits_num_gen(config):
     global rng
     if isinstance(config.random_seed, int):
-        print(config.random_seed, rng)
         rng = np.random.default_rng(config.random_seed)
-        print(rng, "rng")
 
     settings = config.orbit_settings
 
@@ -57,16 +55,23 @@ def orbits_num_gen(config):
 
         a = -mu / (2 * H)  # semi-major axis
         e = np.sqrt(1 - L ** 2 / (mu * a))
+        #print(L ** 2 + 1 / (2 * H))
+        #0 <= L^2 <= -1 / (2 * H)
+        #0 <= H <= -1/(2 * L^2)
 
         # https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vector/.pdf
         T = 2 * np.pi * np.sqrt(a ** 3 / mu)  # period
 
-        if not isinstance(settings.traj_range, float):
+        if not isinstance(settings.traj_range, float) and not isinstance(settings.traj_range, int):
             t = sample_distribution(settings.t_distr, settings.num_trajs * settings.num_ts).reshape((settings.num_trajs, settings.num_ts))
         else:
             t = np.repeat(sample_distribution(settings.t_distr, settings.num_trajs)[:, np.newaxis], settings.num_ts, axis=1)
             lim = T * settings.traj_range
+            if config.modality == "image":
+                lim = lim[:, :, 0]
             eps = rng.uniform(size=(settings.num_trajs, settings.num_ts)) * lim
+            print(lim.shape, eps.shape, t.shape)
+            input("hey!")
             t = t + eps
 
         if config.modality == "image":
@@ -123,9 +128,46 @@ def orbits_num_gen(config):
         "data": data,
         "x": data[..., 0],
         "y": data[..., 1],
-        "v.x": data[..., 0],
-        "v.y": data[..., 1]
+        "v.x": data[..., 2],
+        "v.y": data[..., 3]
     }
+
+def orbits_num_with_resampling(config):
+    settings = config.orbit_settings
+    cond = settings.pq_resample_condition
+    if cond == None:
+        return orbits_num_gen(config)
+
+    accum_dict = {}
+    num_ok = 0
+
+    cont = True
+    first_iteration = True
+    while cont:
+        bundle = orbits_num_gen(config)
+
+        if first_iteration:
+            for key in bundle.keys():
+                cond = cond.replace(key, f"bundle['{key}']")
+                accum_dict[key] = []
+        first_iteration = False
+
+        mask = eval(cond)
+        mask = np.all(mask, axis=1)
+
+        for key in bundle.keys():
+            accum_dict[key].append(bundle[key][mask])
+        num_ok += np.sum(mask.astype('int32'))
+        print(num_ok)
+
+        if num_ok >= settings.num_trajs:
+            cont = False
+
+    for key in accum_dict.keys():
+        accum_dict[key] = np.concatenate(accum_dict[key], axis=0)[:settings.num_trajs]
+    print(accum_dict["data"][:100])
+
+    return accum_dict
 
 def orbits_img_gen(config, bundle):
     """

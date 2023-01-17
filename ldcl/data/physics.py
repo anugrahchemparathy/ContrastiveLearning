@@ -18,7 +18,7 @@ import torchvision
 from .config import read_config
 
 from .pendulum import pendulum_num_gen, pendulum_img_gen
-from .orbit import orbits_num_gen, orbits_img_gen
+from .orbit import orbits_num_with_resampling, orbits_img_gen
 
 rng = np.random.default_rng(9)  # manually seed random number generator
 verbose = True
@@ -33,7 +33,7 @@ class ConservationDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         x_data = self.data[idx]
         if isinstance(idx, int):
-            x_data = torch.unsqueeze(x_data, 0)
+            x_data = x_data[np.newaxis, :]
         random_x_rows = np.random.randint(0,x_data.shape[1],size=(x_data.shape[0], 2)) # generate two different views
 
         indexer = np.repeat(np.arange(x_data.shape[0])[:, np.newaxis], 2, axis=1)
@@ -71,11 +71,11 @@ class NaturalDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx, show_images=False):
         x_data = self.data[idx]
-        
+
         #x_data = x_data.to('cuda')
 
-        x_view1 = self.ts(x_data) 
-        x_view2 = self.ts(x_data) 
+        x_view1 = self.ts(x_data)
+        x_view2 = self.ts(x_data)
 
         #x_view1 = x_view1.to('cpu')
         #x_view2 = x_view2.to('cpu')
@@ -151,7 +151,7 @@ def get_conservation_dataset(config, saved_dir, return_bundle=False):
                 p = Path(other_file)
                 other_file = p.parents[0]
                 folder_name = str(os.path.join(other_file, ''))
-                
+
                 bundle = {}
                 for npfile in glob.glob(os.path.join(other_file, "*.npy")):
                     name = Path(npfile).with_suffix('').name
@@ -170,7 +170,7 @@ def get_conservation_dataset(config, saved_dir, return_bundle=False):
             else:
                 raise ValueError("Config modality not specified")
         elif config.dynamics == "orbits":
-            bundle = orbits_num_gen(config)
+            bundle = orbits_num_with_resampling(config)
             if config.modality == "image":
                 bundle = orbits_img_gen(config, bundle)
             elif config.modality == "numerical":
@@ -192,7 +192,7 @@ def get_conservation_dataset(config, saved_dir, return_bundle=False):
 
         with open(folder_name + "/config.json", "w") as f:
             json.dump(config, f)
-    
+
     if return_bundle:
         return bundle, folder_name
     else:
@@ -216,7 +216,7 @@ def combine_datasets(configs, ratio, save_folder):
     dataset = ConservationDataset(bundle)
 
     return dataset
-    
+
 
 #get_dataset("orbit_config_default.json")
 

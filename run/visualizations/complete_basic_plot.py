@@ -7,6 +7,7 @@ from ldcl.tools.device import get_device
 
 from sklearn.decomposition import PCA
 import argparse
+import numpy as np
 
 device = get_device()
 
@@ -15,9 +16,19 @@ def main_plot(args):
     if args.image:
         dataset, _ = get_dataset("../data_configs/orbit_images_medxl.json", "../../saved_datasets")
     else:
-        dataset, _ = get_dataset("../data_configs/orbit_config_default.json", "../../saved_datasets")
+        dataset, _ = get_dataset("../data_configs/complete_orbits.json", "../../saved_datasets")
+        #dataset, _ = get_dataset("../data_configs/Hphi0_vary.json", "../../saved_datasets")
 
     embeds, vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", dataset, device=device)
+
+    print("Mask in effect! L < 1")
+    #mask = np.logical_and(np.less(vals["L"], 2), np.greater(vals["L"], 0.5))
+    #mask = np.greater(vals["L"], 0.5)
+    """
+    embeds = embeds[mask]
+    for key in vals.keys():
+        vals[key] = vals[key][mask]
+    """
 
     """
     # Dim reduction (2d only).

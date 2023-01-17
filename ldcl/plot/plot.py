@@ -7,33 +7,35 @@ plt.style.use('ggplot')
 import numpy as np
 import os
 
+from scipy.signal import savgol_filter
+
 from .color import get_cmap
 
 class VisPlot:
     """
         Plot class for easy plotting!
 
-        Initialize like this, specifying the number of dimensions (MPL 2d or Plotly 3d) 
+        Initialize like this, specifying the number of dimensions (MPL 2d or Plotly 3d)
         and then the number of subplots (optional if one):
 
             plot = VisPlot(2, num_subplots=2)
 
         In general, the syntax is identical for 2D or 3D plots, so you can switch
-        easily in between them.  
+        easily in between them.
 
         Plots can be successively added. This means you can plot multiple datasets at
         once, although be careful to use the same dimensionality reduction on all of
         them if you reduce dimensions. The most simple command is VisPlot.add:
 
             points = np.random.rand(100,2)
-            label = {"num": np.array(list(range(100)))} 
+            label = {"num": np.array(list(range(100)))}
             a_color = plt.get_cmap("viridis")(label["num"] / 100)
             b_color = plt.get_cmap("plasma")(label["num"] / 100)
             plot.add(points, size=np.linspace(1,2,num=100), color=np.stack(a_color, b_color), label=label)
 
         Of course, it would be more correct to use ldcl.color's get_cmap and not
-        plt's. This would plot 100 random points in growing size with matplotlib in 2d, 
-        with two subplots, identical except the left one uses viridis colormap and the 
+        plt's. This would plot 100 random points in growing size with matplotlib in 2d,
+        with two subplots, identical except the left one uses viridis colormap and the
         right one uses plasma colormap. Note that the default behavior is to plot
         the same points but with different colors.
 
@@ -47,7 +49,7 @@ class VisPlot:
         if you want more control over the coloring, add will give you the most control.
         An example of how to use add_with_cmap to do what we just did would
         look like this:
-            
+
             plot.add_with_cmap(points, label, cmap=["viridis", "plasma"], cby=["num", "num"], size=np.linspace(1, 2, num=100))
 
         Note that ldcl.color's colormaps automatically normalize data so label["num"]
@@ -59,10 +61,10 @@ class VisPlot:
 
         There is also a set_title function to automatically set all the titles of the
         subplot(s). Its usage is pretty straightforward:
-        
+
             plot.set_title(["viridis", "plasma"])
 
-        in the previous instance. 
+        in the previous instance.
 
         To do more dramatic changes to the figure (e.g. add labels, axis titles, etc.)
         it is best to access the internal objects VisPlot.fig (which is the figure in
@@ -72,15 +74,15 @@ class VisPlot:
         in Plotly mode but I can't think of any workaround for now.
 
         Finally, to show the plot, simply call
-            
+
             plot.show()
 
         For Plotly, it writes it to plot.html in the same directory and then opens it.
         For MPL, it just does the interactive widget there where it opesn up its own
-        app. 
+        app.
 
         To do this exact same demo but in 3d, replace
-        
+
             plot = VisPlot(2, num_subplots=2) => plot = VisPlot(3, num_subplots=2)
             points = np.random.rand(100,2) => points = np.random.rand(100,3)
     """
@@ -110,7 +112,7 @@ class VisPlot:
             )
 
             fig = make_subplots(rows=1, cols=num_subplots, specs = [[{'is_3d':True}] * num_subplots], subplot_titles=[" "] * num_subplots)
-            
+
             fig.update_layout(scene_camera=camera)
             fig.update_scenes(xaxis_visible=False, yaxis_visible=False,zaxis_visible=False)
 
@@ -175,7 +177,7 @@ class VisPlot:
 
     def add_with_cmap(self, points, label, cmap=None, cby=None, **otherargs):
         """
-            Even faster plotting, like VisPlot.add but you can specify the 
+            Even faster plotting, like VisPlot.add but you can specify the
             cmaps and variables to color by immediately.
 
             Example usage:
@@ -184,7 +186,7 @@ class VisPlot:
             :param points: the points you want to plot (see VisPlot.add)
             :param label: dictionary containing relevant information about the points,
                 and which the colors will come from.
-            :param cmap: a single colormap function, a string specifying one, or multiple 
+            :param cmap: a single colormap function, a string specifying one, or multiple
                 (as many as num_subplots) as a list which will map the indicated variables.
                 More explanation at cby.
             :param cby: the "colored-by" variables, which you can retrieve as keys
@@ -220,7 +222,7 @@ class VisPlot:
         """
             Set titles for the plots.
 
-            :param titles: one string or a list of strings, of length 
+            :param titles: one string or a list of strings, of length
                 self.num_subplots, which are the new plot titles.
         """
         if isinstance(titles, str): # fix if has length 1
@@ -246,10 +248,11 @@ class VisPlot:
             self.fig.write_html('plot.html', auto_open=True)
 
 def plot_loss(loss, title, save_progress_path):
+    loss = savgol_filter(loss, 51, 3)
     plt.plot(np.arange(loss.shape[0]), loss)
     plt.title(title)
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
-    
+
     plt.savefig(os.path.join(save_progress_path, f'training_loss.png'))
 

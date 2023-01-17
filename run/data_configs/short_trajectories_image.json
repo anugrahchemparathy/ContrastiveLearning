@@ -1,12 +1,12 @@
 {
     "dynamics": "orbits",
-    "modality": "numerical",
+    "modality": "image",
     "use_cached_data": "True",
     "verbose": "True",
     "orbit_settings": {
         "mu": 1.0,
-        "num_trajs": 10240,
-        "num_ts": 10,
+        "num_trajs": 640,
+        "num_ts": 5,
         "traj_distr": {
             "type": "uniform",
             "dims": 3,
@@ -23,15 +23,17 @@
         "pq_resample_condition": "None",
         "shuffle": "True",
         "check": "False",
-        "traj_range": 0.0001
+        "traj_range": 1.0
     },
-    "pendulum_imagen_settings": {
+    "orbits_imagen_settings": {
         "noise": 0,
-        "img_size": 32,
-        "diff_time": 0.5,
-        "bob_size": 1,
-        "continuous": "False",
-        "crop": 1,
-        "crop_c": "-1, -1"
+        "img_size": 56,
+        "num_pts": 10,
+        "diff_time": 1,
+        "start_color": "0.0,0.0,0.0",
+        "end_color": "1.0,0.0,0.0",
+        "scale": 4,
+        "continuous": "True",
+        "not_visible": "do_nothing"
     }
 }

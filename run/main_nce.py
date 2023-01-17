@@ -40,7 +40,7 @@ def training_loop(args):
     num_workers: multiprocess data loading
     """
     save_progress_path = os.path.join(SCRIPT_PATH, "saved_models", args.fname)
-    while os.path.exists(save_progress_path):
+    while os.path.exists(save_progress_path) and not args.override:
         to_del = input("Saved directory already exists. If you continue, you may erase previous training data. Press Ctrl+C to stop now. Otherwise, type 'yes' to continue:")
         if to_del == "yes":
             shutil.rmtree(save_progress_path)
@@ -54,10 +54,9 @@ def training_loop(args):
     train_orbits_loader = torch.utils.data.DataLoader(
         dataset = train_orbits_dataset,
         sampler=torch.utils.data.BatchSampler(
-                torch.utils.data.RandomSampler(train_orbits_dataset), batch_size=args.bsz, drop_last=False
+                torch.utils.data.RandomSampler(train_orbits_dataset), batch_size=args.bsz, drop_last=True
             ),
     )
-
 
     is_natural = isinstance(train_orbits_dataset, physics.NaturalDataset)
     if is_natural:
@@ -66,12 +65,14 @@ def training_loop(args):
             dataset = train_orbits_dataset2,
             shuffle = False,
             batch_size = args.bsz,
+            drop_last=True
         )
         test_orbits_dataset, folder = physics.get_dataset(data_config_file.replace("train", "test"), "../saved_datasets", no_aug=True)
         test_orbits_loader = torch.utils.data.DataLoader(
             dataset = test_orbits_dataset,
             shuffle = False,
-            batch_size = args.bsz
+            batch_size = args.bsz,
+            drop_last=True
         )
 
     if args.all_epochs:
@@ -83,8 +84,8 @@ def training_loop(args):
     if is_natural:
         encoder = branch.branchImageEncoder(encoder_out=1024, useBatchNorm=True, encoder_hidden=768, num_layers=2)
     else:
-        #encoder = branch.branchImageEncoder(encoder_out=3)
-        encoder = branch.branchEncoder(encoder_out=3)
+        encoder = branch.branchImageEncoder(encoder_out=3)
+        #encoder = branch.branchEncoder(encoder_out=3)
 
     model = branch.sslModel(encoder=encoder)
     model.to(device)
@@ -115,9 +116,9 @@ def training_loop(args):
                 else:
                     saved_metrics[name] = [new_val]
                 mtrd[name] = new_val
-        
+
         t.set_postfix(**mtrd)
-    
+
     emtrs = {} # training metrics
 
     with tqdm.trange(args.epochs * len(train_orbits_loader)) as t:
@@ -129,11 +130,12 @@ def training_loop(args):
                 model.zero_grad()
 
                 # forward pass
+                print(device)
                 input1 = input1[0].type(torch.float32).to(device)
                 input2 = input2[0].type(torch.float32).to(device)
 
                 if args.mixed_precision:
-                    with autocast(): 
+                    with autocast():
                         z1 = model(input1)
                         z2 = model(input2)
 
@@ -169,7 +171,7 @@ def training_loop(args):
         np.save(os.path.join(save_progress_path, f"{name}.npy"), slist)
 
     plot_loss(losses, title = args.fname, save_progress_path = save_progress_path)
-     
+
     return encoder
 
 if __name__ == '__main__':
@@ -186,6 +188,7 @@ if __name__ == '__main__':
     parser.add_argument('--all_epochs', default=False, type=bool)
     parser.add_argument('--eval_every', default=3, type=int)
     parser.add_argument('--mixed_precision', action='store_true')
+    parser.add_argument('--override', action='store_true')
     parser.add_argument('--device', default=0, type=int)
 
     args = parser.parse_args()

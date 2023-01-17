@@ -8,6 +8,8 @@ from ldcl.tools.device import get_device
 from sklearn.decomposition import PCA
 import argparse
 
+import numpy as np
+
 device = get_device()
 
 
@@ -61,10 +63,9 @@ def main_plot(args):
     def cmap_three():
         nonlocal embeds
 
-        plot = VisPlot(3, num_subplots=3) # 3D plot, 2 for 2D plot
-        embeds = -1 * embeds
-        print("remove -1 fatcor from embeds (basic_plot cmap three)")
-        plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis"], cby=["phi0", "H", "L"], size=1.5, outline=False)
+        plot = VisPlot(3, num_subplots=7) # 3D plot, 2 for 2D plot
+        print(np.min(vals["v.x"]), np.max(vals["v.y"]))
+        plot.add_with_cmap(embeds, vals, cmap="viridis", cby=["x", "y", "v.x", "v.y", "H", "L", "phi0"], size=1.5, outline=False)
         return plot
 
     def cmap_one():

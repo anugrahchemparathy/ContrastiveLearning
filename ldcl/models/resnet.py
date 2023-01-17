@@ -169,7 +169,7 @@ class ResNet(nn.Module):
             norm_layer: Optional[Callable[..., nn.Module]] = None,
     ) -> None:
         super().__init__()
-        print("Note swapped channels version of x (src:resnet)")
+        #print("Note swapped channels version of x (src:resnet)")
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         self._norm_layer = norm_layer
@@ -275,10 +275,12 @@ class ResNet(nn.Module):
         return x
 
     def forward(self, x: Tensor) -> Tensor:
+        """
         if x.dim() == 4:
             x = torch.swapaxes(x, 1, 3)
         elif x.dim() == 3:
             x = torch.swapaxes(x, 0, 2)
+        """
         return self._forward_impl(x)
 
 

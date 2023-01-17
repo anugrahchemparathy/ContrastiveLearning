@@ -19,6 +19,7 @@ run/saved_models/*
 **/*.swp
 
 **/*.html
+**/*.gif
 
 run/Ignore*.ipynb
 

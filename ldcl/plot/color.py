@@ -25,12 +25,14 @@ def get_cmap(cmap, normalize=True):
             func = sns.color_palette(cmap, 512, as_cmap=True)
 
     def normalize_wrap(x):
-        x = x - np.min(x)
+        x = x - np.quantile(x, 0.05)
 
         if np.max(x) < 1e-12: # the values are probably all zero
             return np.full(np.shape(x), 0.5)
         else:
-            x = x / np.max(x)
+            x = x / np.quantile(x, 0.95)
+            x = np.maximum(x, 0)
+            x = np.minimum(x, 1) # cutoff
             return x
 
     if normalize:
