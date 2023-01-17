@@ -15,6 +15,7 @@ def get_device(cpu_only=False, idx=0):
     device = None
     if torch.cuda.is_available():
         device = torch.device(f"cuda:{idx}")
+        print(device, idx)
         """
         print('cuda workaround for now on supercloud')
         if 'Tesla' in torch.cuda.get_device_name(idx):

@@ -7,28 +7,20 @@ from ldcl.tools.device import get_device
 
 from sklearn.decomposition import PCA
 import argparse
-import numpy as np
 
-device = get_device()
+import subprocess
+
+device = get_device(idx=7)
 
 
 def main_plot(args):
     if args.image:
-        dataset, _ = get_dataset("../data_configs/orbit_images_medxl.json", "../../saved_datasets")
+        dataset, _ = get_dataset("../data_configs/orbit_completeimages_medxl2.json", "../../saved_datasets")
+        #dataset, _ = get_dataset("../data_configs/orbit_resz_medxl.json", "../../saved_datasets")
     else:
-        dataset, _ = get_dataset("../data_configs/complete_orbits.json", "../../saved_datasets")
-        #dataset, _ = get_dataset("../data_configs/Hphi0_vary.json", "../../saved_datasets")
+        dataset, _ = get_dataset("../data_configs/orbit_config_default.json", "../../saved_datasets")
 
     embeds, vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", dataset, device=device)
-
-    print("Mask in effect! L < 1")
-    #mask = np.logical_and(np.less(vals["L"], 2), np.greater(vals["L"], 0.5))
-    #mask = np.greater(vals["L"], 0.5)
-    """
-    embeds = embeds[mask]
-    for key in vals.keys():
-        vals[key] = vals[key][mask]
-    """
 
     """
     # Dim reduction (2d only).
@@ -72,10 +64,9 @@ def main_plot(args):
     def cmap_three():
         nonlocal embeds
 
-        plot = VisPlot(3, num_subplots=3) # 3D plot, 2 for 2D plot
-        embeds = -1 * embeds
-        print("remove -1 fatcor from embeds (basic_plot cmap three)")
-        plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis"], cby=["phi0", "H", "L"], size=1.5, outline=False)
+        plot = VisPlot(3, num_subplots=4) # 3D plot, 2 for 2D plot
+        print(embeds.shape)
+        plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "ecc"], size=1.5, outline=False)
         return plot
 
     def cmap_one():
@@ -89,12 +80,15 @@ def main_plot(args):
     #plot = cmap_one()
 
     plot.show()
+    if args.server:
+        subprocess.run('python -m http.server', shell=True)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--fname', type=str)
     parser.add_argument('--image', action='store_true')
     parser.add_argument('--id', default='final', type=str)
+    parser.add_argument('--server', action='store_true')
 
     args = parser.parse_args()
     main_plot(args)

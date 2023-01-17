@@ -70,8 +70,6 @@ def orbits_num_gen(config):
             if config.modality == "image":
                 lim = lim[:, :, 0]
             eps = rng.uniform(size=(settings.num_trajs, settings.num_ts)) * lim
-            print(lim.shape, eps.shape, t.shape)
-            input("hey!")
             t = t + eps
 
         if config.modality == "image":
@@ -129,7 +127,9 @@ def orbits_num_gen(config):
         "x": data[..., 0],
         "y": data[..., 1],
         "v.x": data[..., 2],
-        "v.y": data[..., 3]
+        "v.y": data[..., 3],
+        "ecc": e,
+        "maj": a
     }
 
 def orbits_num_with_resampling(config):
@@ -152,8 +152,11 @@ def orbits_num_with_resampling(config):
                 accum_dict[key] = []
         first_iteration = False
 
+        print(cond)
         mask = eval(cond)
         mask = np.all(mask, axis=1)
+        if len(mask.shape) == 2 and mask.shape[1] == 1:
+            mask = mask[:, 0]
 
         for key in bundle.keys():
             accum_dict[key].append(bundle[key][mask])

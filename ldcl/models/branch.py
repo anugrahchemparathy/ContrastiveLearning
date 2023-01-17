@@ -4,7 +4,10 @@ import torch.nn as nn
 import torchvision
 import os
 
-from .resnet import resnet18
+from torchvision.models import resnet18
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 class sslModel(nn.Module):
     def __init__(self, encoder=None, projector=None, predictor=None):
@@ -62,14 +65,12 @@ class branchEncoder(nn.Module):
 
     def forward(self, x):
         return self.encoder(x)
-
 class branchImageEncoder(nn.Module):
     def __init__(self, encoder_out = 3, encoder_hidden = 64, num_layers = 4, useBatchNorm = False, activation = nn.ReLU(inplace=True)):
         super().__init__()
         self.num_layers = num_layers
         self.bn = useBatchNorm
         self.activation = activation
-        #self.encoder = torchvision.models.resnet18(weights=None)
         self.encoder = resnet18()
 
         encoder_layers = [nn.Linear(512,encoder_hidden)]

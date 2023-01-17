@@ -22,17 +22,16 @@
         "noise": 0,
         "pq_resample_condition": "None",
         "shuffle": "True",
-        "check": "False",
-        "traj_range": 0.25
+        "check": "False"
     },
     "orbits_imagen_settings": {
         "noise": 0,
-        "img_size": 56,
-        "num_pts": 10,
-        "diff_time": 1,
+        "img_size": 32,
+        "num_pts": 4,
+        "diff_time": 0.2,
         "start_color": "0.0,0.0,0.0",
         "end_color": "1.0,0.0,0.0",
-        "scale": 4,
+        "scale": 3,
         "continuous": "True",
         "not_visible": "do_nothing"
     }

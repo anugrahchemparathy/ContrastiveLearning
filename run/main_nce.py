@@ -29,7 +29,8 @@ scaler = GradScaler()
 import pathlib
 SCRIPT_PATH = pathlib.Path(__file__).parent.resolve().as_posix() + "/" # always get this directory
 
-saved_epochs = list(range(20)) + [20,40,60,80,100,200,300,400,500,600,700,1000,1400]
+#saved_epochs = list(range(20)) + [20,40,60,80,100,200,300,400,500,600,700,1000,1400]
+saved_epochs = list(range(0, 10000, 20))
 
 def training_loop(args):
     global saved_epochs
@@ -130,7 +131,6 @@ def training_loop(args):
                 model.zero_grad()
 
                 # forward pass
-                print(device)
                 input1 = input1[0].type(torch.float32).to(device)
                 input2 = input2[0].type(torch.float32).to(device)
 
@@ -192,5 +192,7 @@ if __name__ == '__main__':
     parser.add_argument('--device', default=0, type=int)
 
     args = parser.parse_args()
-    device = get_device(args.device)
+    device = get_device(idx=args.device)
+    print(args.device, 'arg')
+    input(device)
     training_loop(args)

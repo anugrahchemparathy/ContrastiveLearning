@@ -8,12 +8,15 @@ from ldcl.tools.device import get_device
 from sklearn.decomposition import PCA
 import argparse
 
-device = get_device()
+import subprocess
+
+device = get_device(idx=7)
 
 
 def main_plot(args):
     if args.image:
-        dataset, _ = get_dataset("../data_configs/orbit_images_medxl.json", "../../saved_datasets")
+        dataset, _ = get_dataset("../data_configs/orbit_images_medxl2.json", "../../saved_datasets")
+        #dataset, _ = get_dataset("../data_configs/orbit_resz_medxl.json", "../../saved_datasets")
     else:
         dataset, _ = get_dataset("../data_configs/orbit_config_default.json", "../../saved_datasets")
 
@@ -62,8 +65,7 @@ def main_plot(args):
         nonlocal embeds
 
         plot = VisPlot(3, num_subplots=3) # 3D plot, 2 for 2D plot
-        embeds = -1 * embeds
-        print("remove -1 fatcor from embeds (basic_plot cmap three)")
+        print(embeds.shape)
         plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis"], cby=["phi0", "H", "L"], size=1.5, outline=False)
         return plot
 
@@ -78,12 +80,15 @@ def main_plot(args):
     #plot = cmap_one()
 
     plot.show()
+    if args.server:
+        subprocess.run('python -m http.server', shell=True)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--fname', type=str)
     parser.add_argument('--image', action='store_true')
     parser.add_argument('--id', default='final', type=str)
+    parser.add_argument('--server', action='store_true')
 
     args = parser.parse_args()
     main_plot(args)
