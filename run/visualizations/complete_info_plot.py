@@ -8,6 +8,8 @@ from ldcl.tools.device import get_device
 from sklearn.decomposition import PCA
 import argparse
 
+import numpy as np
+
 import subprocess
 
 device = get_device(idx=7)
@@ -15,12 +17,22 @@ device = get_device(idx=7)
 
 def main_plot(args):
     if args.image:
-        dataset, _ = get_dataset("../data_configs/orbit_images_medxl2.json", "../../saved_datasets")
+        dataset, _ = get_dataset("../data_configs/orbit_completeimages_medxl2.json", "../../saved_datasets")
+        print(_)
         #dataset, _ = get_dataset("../data_configs/orbit_resz_medxl.json", "../../saved_datasets")
+        single_orbit, _ = get_dataset("../data_configs/single_orbit_image.json", "../../saved_datasets")
     else:
         dataset, _ = get_dataset("../data_configs/orbit_config_default.json", "../../saved_datasets")
+        single_orbit, _ = get_dataset("../data_configs/single_orbit.json", "../../saved_datasets")
 
     embeds, vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", dataset, device=device)
+
+    # utility modifications
+    vals["L"] = np.minimum(1, vals["L"])
+    so_embeds, so_vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", single_orbit, device=device)
+    so_embeds = so_embeds[::10]
+    for key in so_vals.keys():
+        so_vals[key] = so_vals[key][::10]
 
     """
     # Dim reduction (2d only).
@@ -37,36 +49,13 @@ def main_plot(args):
 
     # Plot
 
-    # option 1: add syntax (more flexible, more work)
-    def add_demo():
-        plot = VisPlot(3) # 3D plot, 2 for 2D plot
-
-        single_orbit_colors = viridis(single_orbit_vals["x"])
-        oneD_span_colors = plasma(oneD_span_vals["x"])
-
-        # Note that a list of sizes can be passed in too.
-
-        plot.add(oneD_span_embeds,
-            size=2,
-            color=oneD_span_colors,
-            label=oneD_span_vals, outline=False)
-        plot.add(single_orbit_embeds,
-            size=4,
-            color=single_orbit_colors,
-            label=single_orbit_vals, outline=False)
-
-        return plot
-
-    # option 2: add_with_cmap syntax (fastest, less flexible)
-    # note that you can put a list of cmap/cby to make multiple plots
-    # this one has both x and H, not just x
-
     def cmap_three():
         nonlocal embeds
 
-        plot = VisPlot(3, num_subplots=5) # 3D plot, 2 for 2D plot
-        print(embeds.shape)
-        plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "x", "y"], size=1.5, outline=False)
+        plot = VisPlot(3, num_subplots=6) # 3D plot, 2 for 2D plot
+        print(vals.keys())
+        plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "x", "v.x", "ecc"], size=1.5, outline=False)
+        plot.add_with_cmap(so_embeds, so_vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "x", "v.x", "ecc"], size=2.5, outline=True)
         return plot
 
     def cmap_one():

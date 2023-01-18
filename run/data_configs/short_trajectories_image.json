@@ -23,7 +23,7 @@
         "pq_resample_condition": "None",
         "shuffle": "True",
         "check": "False",
-        "traj_range": 0.25
+        "traj_range": 0.6
     },
     "orbits_imagen_settings": {
         "noise": 0,

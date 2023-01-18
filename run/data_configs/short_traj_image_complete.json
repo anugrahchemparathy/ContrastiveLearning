@@ -23,7 +23,7 @@
         "pq_resample_condition": "H >= -0.5 * 1/(L ** 2)",
         "shuffle": "True",
         "check": "False",
-        "traj_range": 0.25
+        "traj_range": 0.75
     },
     "orbits_imagen_settings": {
         "noise": 0,

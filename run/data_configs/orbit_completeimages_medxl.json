@@ -27,8 +27,8 @@
     "orbits_imagen_settings": {
         "noise": 0,
         "img_size": 56,
-        "num_pts": 2,
-        "diff_time": 0.5,
+        "num_pts": 10,
+        "diff_time": 1,
         "start_color": "0.0,0.0,0.0",
         "end_color": "1.0,0.0,0.0",
         "scale": 4,

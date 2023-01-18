@@ -9,7 +9,7 @@
         "num_ts": 10,
         "traj_distr": {
             "type": "single",
-            "value": "-0.375,0.5,3.14"
+            "value": "-.375,0.5,3.14"
         },
         "t_distr": {
             "type": "uniform",

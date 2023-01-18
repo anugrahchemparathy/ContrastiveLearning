@@ -119,18 +119,34 @@ def orbits_num_gen(config):
         for x in data:
             rng.shuffle(x, axis=0)
 
-    return {
-        "phi0": phi0,
-        "H": H,
-        "L": L,
-        "data": data,
-        "x": data[..., 0],
-        "y": data[..., 1],
-        "v.x": data[..., 2],
-        "v.y": data[..., 3],
-        "ecc": e,
-        "maj": a
-    }
+    if config.modality == "image":
+        return {
+            "phi0": phi0,
+            "H": H,
+            "L": L,
+            "data": data,
+            "x": data[..., 0],
+            "y": data[..., 1],
+            "x_": data[..., -1, 0],
+            "y_": data[..., -1, 1],
+            "v.x": data[..., 2],
+            "v.y": data[..., 3],
+            "ecc": e,
+            "maj": a
+        }
+    else:
+        return {
+            "phi0": phi0,
+            "H": H,
+            "L": L,
+            "data": data,
+            "x": data[..., 0],
+            "y": data[..., 1],
+            "v.x": data[..., 2],
+            "v.y": data[..., 3],
+            "ecc": e,
+            "maj": a
+        }
 
 def orbits_num_with_resampling(config):
     settings = config.orbit_settings
