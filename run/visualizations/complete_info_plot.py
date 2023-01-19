@@ -34,6 +34,12 @@ def main_plot(args):
     for key in so_vals.keys():
         so_vals[key] = so_vals[key][::10]
 
+    mask = np.less(vals['phi0'], 3.14)
+    embeds = embeds[mask]
+    for key in vals.keys():
+        vals[key] = vals[key][mask]
+
+
     """
     # Dim reduction (2d only).
     pca = PCA(n_components=2) # dimensionality reduction for 2D

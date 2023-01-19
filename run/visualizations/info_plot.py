@@ -1,3 +1,5 @@
+import numpy as np
+
 from ldcl.plot.plot import VisPlot
 from ldcl.plot.embed import embed
 from ldcl.plot.color import get_cmap
@@ -20,10 +22,19 @@ def main_plot(args):
         single_orbit, _ = get_dataset("../data_configs/single_orbit_image.json", "../../saved_datasets")
     else:
         dataset, _ = get_dataset("../data_configs/orbit_config_default.json", "../../saved_datasets")
+        print(_)
         single_orbit, _ = get_dataset("../data_configs/single_orbit.json", "../../saved_datasets")
 
     embeds, vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", dataset, device=device)
     so_embeds, so_vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", single_orbit, device=device)
+    so_embeds = so_embeds[::10]
+    for key in so_vals.keys():
+        so_vals[key] = so_vals[key][::10]
+    
+    mask = np.less(vals['phi0'], 3.14)
+    embeds = embeds[mask]
+    for key in vals.keys():
+        vals[key] = vals[key][mask]
 
     """
     # Dim reduction (2d only).

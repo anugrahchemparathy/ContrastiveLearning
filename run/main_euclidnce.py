@@ -85,8 +85,8 @@ def training_loop(args):
     if is_natural:
         encoder = branch.branchImageEncoder(encoder_out=1024, useBatchNorm=True, encoder_hidden=768, num_layers=2)
     else:
-        encoder = branch.branchImageEncoder(encoder_out=3)
-        #encoder = branch.branchEncoder(encoder_out=3)
+        # encoder = branch.branchImageEncoder(encoder_out=3)
+        encoder = branch.branchEncoder(encoder_out=3)
 
     model = branch.sslModel(encoder=encoder)
     model.to(device)
