@@ -48,13 +48,14 @@ def orbits_num_gen(config):
     while E is None:
         all_conserved = sample_distribution(settings.traj_distr, settings.num_trajs)
         noise = indistribution_noise(all_conserved, settings.traj_distr, settings.noise, repeat=settings.num_ts)
-        H, L, phi0 = tuple([all_conserved[..., i, np.newaxis] + noise[..., i, :] for i in range(3)])
+        H, e, phi0 = tuple([all_conserved[..., i, np.newaxis] + noise[..., i, :] for i in range(3)])
 
         if config.modality == "image":
-            H, L, phi0 = H[..., np.newaxis], L[..., np.newaxis], phi0[..., np.newaxis]
+            H, e, phi0 = H[..., np.newaxis], e[..., np.newaxis], phi0[..., np.newaxis]
 
         a = -mu / (2 * H)  # semi-major axis
-        e = np.sqrt(1 - L ** 2 / (mu * a))
+        L = np.sqrt(mu * a * (1-e**2))
+        #e = np.sqrt(1 - L ** 2 / (mu * a))
         #print(L ** 2 + 1 / (2 * H))
         #0 <= L^2 <= -1 / (2 * H)
         #0 <= H <= -1/(2 * L^2)
