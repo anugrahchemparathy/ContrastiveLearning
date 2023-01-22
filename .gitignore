@@ -21,6 +21,8 @@ run/saved_models/*
 **/*.html
 **/*.gif
 
+**/images/
+
 run/Ignore*.ipynb
 
 run/visualizations/train_progression/*.png
