@@ -168,7 +168,6 @@ def orbits_num_with_resampling(config):
                 accum_dict[key] = []
         first_iteration = False
 
-        print(cond)
         mask = eval(cond)
         mask = np.all(mask, axis=1)
         if len(mask.shape) == 2 and mask.shape[1] == 1:
@@ -177,14 +176,12 @@ def orbits_num_with_resampling(config):
         for key in bundle.keys():
             accum_dict[key].append(bundle[key][mask])
         num_ok += np.sum(mask.astype('int32'))
-        print(num_ok)
 
         if num_ok >= settings.num_trajs:
             cont = False
 
     for key in accum_dict.keys():
         accum_dict[key] = np.concatenate(accum_dict[key], axis=0)[:settings.num_trajs]
-    print(accum_dict["data"][:100])
 
     return accum_dict
 

@@ -75,6 +75,15 @@ def training_loop(args):
             batch_size = args.bsz,
             drop_last=True
         )
+    if args.many_losses:
+        val_data_loaders = {
+            "05": torch.utils.data.DataLoader(physics.get_dataset("data_configs/short_traj_05.json", "../saved_datasets")[0], drop_last=True, batch_size=args.bsz),
+            "10": torch.utils.data.DataLoader(physics.get_dataset("data_configs/short_traj_10.json", "../saved_datasets")[0], drop_last=True, batch_size=args.bsz),
+            "20": torch.utils.data.DataLoader(physics.get_dataset("data_configs/short_traj_20.json", "../saved_datasets")[0], drop_last=True, batch_size=args.bsz),
+            "50": torch.utils.data.DataLoader(physics.get_dataset("data_configs/short_traj_50.json", "../saved_datasets")[0], drop_last=True, batch_size=args.bsz),
+            "100": torch.utils.data.DataLoader(physics.get_dataset("data_configs/orbit_config_default.json", "../saved_datasets")[0], drop_last=True, batch_size=args.bsz)
+        }
+        print(val_data_loaders["05"])
 
     if args.all_epochs:
         saved_epochs = list(range(args.epochs))
@@ -85,8 +94,8 @@ def training_loop(args):
     if is_natural:
         encoder = branch.branchImageEncoder(encoder_out=1024, useBatchNorm=True, encoder_hidden=768, num_layers=2)
     else:
-        encoder = branch.branchImageEncoder(encoder_out=3)
-        #encoder = branch.branchEncoder(encoder_out=3)
+        #encoder = branch.branchImageEncoder(encoder_out=3)
+        encoder = branch.branchEncoder(encoder_out=3)
 
     model = branch.sslModel(encoder=encoder)
     model.to(device)
@@ -120,7 +129,17 @@ def training_loop(args):
 
         t.set_postfix(**mtrd)
 
-    emtrs = {} # training metrics
+    direct_loss = lambda x, y: apply_loss(x, y, rmseNCE)
+    if args.many_losses:
+        emtrs = {
+            "five": lambda: metrics.eval_on_loader(model, val_data_loaders["05"], direct_loss, device=device),
+            "ten": lambda: metrics.eval_on_loader(model, val_data_loaders["10"], direct_loss, device=device),
+            "twenty": lambda: metrics.eval_on_loader(model, val_data_loaders["20"], direct_loss, device=device),
+            "fifty": lambda: metrics.eval_on_loader(model, val_data_loaders["50"], direct_loss, device=device),
+            "full": lambda: metrics.eval_on_loader(model, val_data_loaders["100"], direct_loss, device=device),
+        } # training metrics
+    else:
+        emtrs = {}
 
     with tqdm.trange(args.epochs * len(train_orbits_loader)) as t:
         update_metrics(t, do_eval=True)
@@ -190,6 +209,7 @@ if __name__ == '__main__':
     parser.add_argument('--mixed_precision', action='store_true')
     parser.add_argument('--override', action='store_true')
     parser.add_argument('--device', default=0, type=int)
+    parser.add_argument('--many_losses', action='store_true')
 
     args = parser.parse_args()
     device = get_device(idx=args.device)

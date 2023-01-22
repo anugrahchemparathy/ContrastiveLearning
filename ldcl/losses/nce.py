@@ -16,7 +16,7 @@ def infoNCE(nn, p, temperature=0.1):
 def rmseNCE(z1, z2, temperature=0.1):
     z1 = torch.unsqueeze(z1,0) #(nxr -> 1xnxr)
     z2 = torch.unsqueeze(z2,0)
-    
+
     euclidean_dist = -torch.cdist(z1,z2,p=2.0) #p=2.0 for standard euclidean distance
     euclidean_dist = torch.squeeze(euclidean_dist)
 
@@ -25,12 +25,14 @@ def rmseNCE(z1, z2, temperature=0.1):
     n = z2.shape[1] #since its unsqueezed (1xnxr), the first real dimension is the second one
     labels = torch.arange(0, n, dtype=torch.long).to(logits.device)
     loss = torch.nn.functional.cross_entropy(logits, labels)
+    if loss == torch.inf:
+        print(logits, labels)
     return loss
 
 def normalmseNCE(z1, z2, temperature=0.1):
     z1 = torch.unsqueeze(z1,0) #(nxr -> 1xnxr)
     z2 = torch.unsqueeze(z2,0)
-    
+
     euclidean_dist = torch.cdist(z1,z2,p=2.0) #p=2.0 for squared distance
     euclidean_dist = torch.squeeze(euclidean_dist)
     #print(euclidean_dist)

@@ -17,18 +17,18 @@ device = get_device(idx=7)
 
 def main_plot(args):
     if args.image:
-        dataset, _ = get_dataset("../data_configs/orbit_completeimages_medxl2.json", "../../saved_datasets")
-        print(_)
+        dataset, folder = get_dataset("../data_configs/orbit_completeimages_medxl2.json", "../../saved_datasets")
         #dataset, _ = get_dataset("../data_configs/orbit_resz_medxl.json", "../../saved_datasets")
-        single_orbit, _ = get_dataset("../data_configs/single_orbit_image.json", "../../saved_datasets")
+        single_orbit, folder2 = get_dataset("../data_configs/single_orbit_image.json", "../../saved_datasets")
     else:
-        dataset, _ = get_dataset("../data_configs/orbit_config_default.json", "../../saved_datasets")
-        single_orbit, _ = get_dataset("../data_configs/single_orbit.json", "../../saved_datasets")
+        dataset, folder = get_dataset("../data_configs/complete_orbits.json", "../../saved_datasets")
+        single_orbit, folder2 = get_dataset("../data_configs/single_orbit.json", "../../saved_datasets")
+    print(f'Using dataset {folder}, {folder2}...')
 
     embeds, vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", dataset, device=device)
 
     # utility modifications
-    vals["L"] = np.minimum(1, vals["L"])
+    #vals["L"] = np.minimum(1, vals["L"])
     so_embeds, so_vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", single_orbit, device=device)
     so_embeds = so_embeds[::10]
     for key in so_vals.keys():
