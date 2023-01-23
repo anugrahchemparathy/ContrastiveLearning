@@ -19,8 +19,6 @@ import numpy as np
 
 from tqdm import tqdm
 
-from ldcl.models.cifar_resnet import Branch
-
 import matplotlib.pyplot as plt
 
 import faiss
@@ -32,18 +30,17 @@ normalize = T.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])
 single_transform = T.Compose([T.ToTensor(), normalize])
 
 
-def eval_loop(croplow, epochs, idd, train_loader, test_loader, ind=None):
-    branch = Branch()
-
-    state_dict = torch.load(f"../cifar10_ckpts/011923_epochs_{epochs}_croplow_{croplow:.1f}/{idd}.pth", map_location=device)["state_dict"]
-    branch.load_state_dict(state_dict)
+def eval_loop(alpha, idd, train_loader, ind=None):
+    #state_dict = torch.load(f"../saved_models/simfig_{alpha:.1f}/{idd}.pth", map_location=device)["state_dict"]
+    #branch.load_state_dict(state_dict)
+    branch = torch.load(f"../saved_models/mass_straj_{alpha}_t0/{idd}_encoder.pt")
     branch.to(device)
     branch.eval()
     encoder = branch.encoder
 
     embeds = []
     lbls = []
-    for idx, (images, labels) in enumerate(test_loader):
+    for idx, (images, labels) in enumerate(train_loader):
         if idx > 50:
             print("Dataset cuts off after fifty iterations for efficiency")
             break
@@ -74,48 +71,27 @@ def matrix_similarity(mat1, mat2):
 
 def main_plot(args):
     # dataset
-    train_transform = T.Compose([
-        T.RandomResizedCrop(32, interpolation=T.InterpolationMode.BICUBIC),
-        T.RandomHorizontalFlip(),
-        T.ToTensor(),
-        normalize
-    ])
-    test_transform = T.Compose([
-        T.Resize(36, interpolation=T.InterpolationMode.BICUBIC),
-        T.CenterCrop(32),
-        T.ToTensor(),
-        normalize
-    ])
-
+    traind, folder = get_dataset("orbit_config_default.json", "../saved_datasets")
     train_loader = torch.utils.data.DataLoader(
-        dataset=torchvision.datasets.CIFAR10('../../data', train=True, transform=test_transform, download=True),
-        shuffle=False,
-        batch_size=256,
-        pin_memory=True,
-        num_workers=16,
-        drop_last=True
-    )
-    test_loader = torch.utils.data.DataLoader(
-        dataset=torchvision.datasets.CIFAR10('../../data', train=False, transform=test_transform, download=True),
-        shuffle=False,
-        batch_size=256,
-        pin_memory=True,
-        num_workers=16
+            dataset = traind,
+            shuffle = False,
+            batch_size = 512,
+            drop_last=True
     )
 
-    skip_factor = 25
-    num_e = 1600
+    skip_factor = 20
+    num_e = 4000
     results = np.zeros((9,4,int(num_e / skip_factor)))
-    for it1, E in enumerate([25,50,75,100,150,200,400,800,1600]):
-        adj1, lbl1 = eval_loop(0.2, 1600, E, train_loader, test_loader)
-        for it2, n in enumerate([0.2,0.5,0.8,1.0]):
+    for it1, E in enumerate([20,40,80,160,320,640,1280,2560,4000]):
+        adj1, lbl1 = eval_loop("100", 4000, E, train_loader)
+        for it2, n in enumerate(["03,10,25,100"]):
             print(f"Experiment {E} x {n}")
             for it3, e in enumerate(tqdm(range(0,num_e,skip_factor))):
                 f = e + skip_factor
-                adj2, lbl2 = eval_loop(n, num_e, f, train_loader, test_loader)
+                adj2, lbl2 = eval_loop(n, num_e, f, train_loader)
                 results[it1, it2, it3] = matrix_similarity(adj1, adj2)
                 print(E, n, f, results[it1, it2, it3])
-                np.save("cifar_results", results)
+                np.save("kepler_results", results)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
