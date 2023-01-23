@@ -21,9 +21,11 @@ from tqdm import tqdm
 
 from ldcl.models.cifar_resnet import Branch
 
+import matplotlib.pyplot as plt
+
 import faiss
 
-device = get_device(idx=7)
+device = get_device(idx=0)
 
 normalize = T.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])
 single_transform = T.Compose([T.ToTensor(), normalize])
@@ -64,7 +66,7 @@ def eval_loop(encoder, ind=None):
         shuffle=True,
         batch_size=256,
         pin_memory=True,
-        num_workers=args.num_workers,
+        num_workers=16,
         drop_last=True
     )
     test_loader = torch.utils.data.DataLoader(
@@ -72,10 +74,11 @@ def eval_loop(encoder, ind=None):
         shuffle=False,
         batch_size=256,
         pin_memory=True,
-        num_workers=args.num_workers
+        num_workers=16
     )
 
     classifier = torch.nn.Linear(512, 10)
+    classifier.to(device)
     # optimization
     optimizer = torch.optim.SGD(
         classifier.parameters(),
@@ -85,7 +88,8 @@ def eval_loop(encoder, ind=None):
     )
 
     # training
-    for e in range(1, 2):
+    for e in range(1, 101):
+        print(e)
         # declaring train
         classifier.train()
         encoder.eval()
@@ -113,7 +117,7 @@ def eval_loop(encoder, ind=None):
             loss.backward()
             optimizer.step()
 
-        if e % 10 == 0:
+        if e % 5 == 0:
             accs = []
             classifier.eval()
             for idx, (images, labels) in enumerate(test_loader):
@@ -137,23 +141,27 @@ def eval_loop(encoder, ind=None):
             b = encoder(images.cuda())
             embeds.append(b)
             b = classifier(b)
-            b = torch.nn.Softmax(b,dim=1)
-            probs.append(b[torch.arange(0,256),labels])
+            b = F.softmax(b, dim=1)
+            probs.append(b[torch.arange(0,torch.numel(labels)),labels])
             lbls.append(labels)
     embeds = torch.cat(embeds)
-    probs = torch.stack(probs)
-    lbls = torch.stack(lbls)
-    print(embeds.shape, probs.shape, "sholud be ~(10000,512) and ~(10000,")
+    probs = torch.cat(probs)
+    lbls = torch.cat(lbls)
+    print('lloaded')
 
     index = faiss.IndexFlatL2(512)
-    index.add(embeds.detach().cpu().numpy())
-    print(index.ntotal, "should be ~10000")
-    dists, _ = index.search(embeds, 21)
+    fembeds = embeds.detach().cpu().numpy() 
+    fembeds = fembeds / np.sqrt(np.sum(np.square(fembeds), axis=1))[:, np.newaxis]
+    index.add(fembeds)
+    dists, _ = index.search(fembeds, 101)
     dists = dists[:, 1:]
-    print(dists.shape, "should be ~10000 x 20", dists[:10, :10], "some distances")
-    dists = np.mean(dists, dim=1)
 
-    return probs, dists, lbls
+    probs = probs.detach().cpu().numpy()
+    np.save('cifar_probs', probs)
+    np.save('cifar_dists', dists)
+
+    dists = np.mean(dists, axis=1)
+    return probs, dists, lbls.detach().cpu().numpy()
 
 def main_plot(args):
     test_loader = torch.utils.data.DataLoader(
@@ -170,9 +178,7 @@ def main_plot(args):
     branch.load_state_dict(state_dict)
     branch.to(device)
 
-    probs,dists,labels = eval_loop(branch)
-    embeds = np.stack((probs,dists),dim=1)
-    vals = { "labels": labels}
+    probs,dists,labels = eval_loop(branch.encoder)
 
     """
     # Dim reduction (2d only).
@@ -181,25 +187,20 @@ def main_plot(args):
     oneD_span_embeds = pca.transform(oneD_span_embeds)
     """
 
-    # Plot
+    plt.scatter(dists, probs, s=0.2)
+    m,b = np.polyfit(dists, probs, 1)
+    print(m,b)
+    x = np.arange(0,0.4,step=0.01)
+    y = m * x + b
+    plt.plot(x,y)
 
-    def cmap_one():
-        plot = VisPlot(2)
-        plot.add_with_cmap(embeds, vals, cmap="tab10", cby="labels", size=3, outline=False)
-        return plot
-
-    plot = cmap_one()
-
-    plot.show()
-    if args.server:
-        subprocess.run('python -m http.server', shell=True)
+    plt.savefig('cifar_test.png')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--croplow', type=float)
     parser.add_argument('--epochs', type=int)
     parser.add_argument('--id', default='final', type=str)
-    parser.add_argument('--server', action='store_true')
 
     args = parser.parse_args()
     main_plot(args)
