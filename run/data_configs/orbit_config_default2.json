@@ -6,7 +6,7 @@
     "orbit_settings": {
         "mu": 1.0,
         "num_trajs": 10240,
-        "num_ts": 10,
+        "num_ts": 100,
         "traj_distr": {
             "type": "uniform",
             "dims": 3,

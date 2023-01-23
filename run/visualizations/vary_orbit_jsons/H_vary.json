@@ -14,12 +14,12 @@
                 {
                     "type": "uniform",
                     "dims": 1,
-                    "min": -0.5,
+                    "min": -0.75,
                     "max": -0.25
                 },
                 {
                     "type": "single",
-                    "value": "0.5,0"
+                    "value": "0.9,0"
                 }
             ]
         },

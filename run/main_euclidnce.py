@@ -86,7 +86,7 @@ def training_loop(args):
         encoder = branch.branchImageEncoder(encoder_out=1024, useBatchNorm=True, encoder_hidden=768, num_layers=2)
     else:
         # encoder = branch.branchImageEncoder(encoder_out=3)
-        encoder = branch.branchEncoder(encoder_out=3)
+        encoder = branch.branchEncoder(encoder_out=3, useBatchNorm=True, encoder_hidden = 256, num_layers = 16)
 
     model = branch.sslModel(encoder=encoder)
     model.to(device)
@@ -177,13 +177,13 @@ def training_loop(args):
 if __name__ == '__main__':
     pass
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epochs', default=1500, type=int)
+    parser.add_argument('--epochs', default=100, type=int)
     parser.add_argument('--lr', default=0.02, type=float)
     parser.add_argument('--bsz', default=512, type=int)
     parser.add_argument('--wd', default=0.001, type=float)
     parser.add_argument('--warmup_epochs', default=5, type=int)
     parser.add_argument('--fine_tune', default=False, type=bool)
-    parser.add_argument('--fname', default='rmse_1500_a' , type = str)
+    parser.add_argument('--fname', default='L2NCE_100_num_a' , type = str)
     parser.add_argument('--data_config', default='orbit_config_default.json' , type = str)
     parser.add_argument('--all_epochs', default=False, type=bool)
     parser.add_argument('--eval_every', default=3, type=int)

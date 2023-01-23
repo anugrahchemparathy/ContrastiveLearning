@@ -56,8 +56,8 @@ def main_plot(args):
 
         plot = VisPlot(3, num_subplots=5) # 3D plot, 2 for 2D plot
         print(embeds.shape)
-        plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "x", "v.x"], size=1.5, outline=False)
-        plot.add_with_cmap(so_embeds, so_vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "x", "v.x"], size=2.5, outline=True)
+        plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "ecc", "x", "v.x"], size=1.5, outline=False)
+        plot.add_with_cmap(so_embeds, so_vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "ecc", "x", "v.x"], size=2.5, outline=True)
         return plot
 
     def cmap_one():
