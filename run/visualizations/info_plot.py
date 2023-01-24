@@ -25,6 +25,11 @@ def main_plot(args):
     embeds, vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", dataset, device=device)
     so_embeds, so_vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", single_orbit, device=device)
 
+    embeds[:,1] = embeds[:,1] * -1
+    so_embeds[:,1] = so_embeds[:,1] * -1
+    embeds[:,0] = embeds[:,0] * -1
+    so_embeds[:,0] = so_embeds[:,0] * -1
+
     """
     # Dim reduction (2d only).
     pca = PCA(n_components=2) # dimensionality reduction for 2D
@@ -51,14 +56,23 @@ def main_plot(args):
 
     def cmap_one():
         plot = VisPlot(3)
-        print(embeds.shape)
-        plot.add_with_cmap(embeds, vals, cmap="viridis", cby="y", size=3, outline=True)
+        plot.add_with_cmap(embeds, vals, cmap="plasma", cby=["L"], size=1.2)
+        plot.add_with_cmap(so_embeds, so_vals, cmap="plasma", cby=["L"], size=3, outline=True)
         return plot
 
     #plot = add_demo()
-    plot = cmap_three()
-    #plot = cmap_one()
+    #plot = cmap_three()
+    plot = cmap_one()
+    camera = dict(
+        up=dict(x=0, y=0, z=1),
+        center=dict(x=0, y=0, z=0),
+        eye=dict(x=11/7, y=-2.25/7, z=0.25/7)
+    )
 
+    plot.fig.update_layout(scene_camera=camera)
+
+    plot.set_title([""])
+    plot.fig.write_image("kepler_embed.pdf")
     plot.show()
     if args.server:
         subprocess.run('python -m http.server', shell=True)
