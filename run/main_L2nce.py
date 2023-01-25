@@ -95,7 +95,7 @@ def training_loop(args):
     optimizer = torch.optim.SGD(model.params(args.lr), lr=args.lr, momentum=0.9, weight_decay=args.wd)
     lr_scheduler = get_lr_scheduler(args, optimizer, train_orbits_loader)
 
-    def apply_loss(z1, z2, loss_func = normalmseNCE):
+    def apply_loss(z1, z2, loss_func = rmseNCE):
         loss = 0.5 * loss_func(z1, z2) + 0.5 * loss_func(z2, z1)
         return loss
 
