@@ -22,6 +22,7 @@ def main_plot(args):
         single_orbit, _ = get_dataset("../data_configs/single_orbit_image.json", "../../saved_datasets")
     else:
         dataset, _ = get_dataset("../data_configs/orbit_config_default.json", "../../saved_datasets")
+        # dataset, _ = get_dataset("../data_configs/H_vary.json", "../../saved_datasets")
         print(_)
         single_orbit, _ = get_dataset("../data_configs/single_orbit.json", "../../saved_datasets")
 
@@ -60,15 +61,29 @@ def main_plot(args):
         plot.add_with_cmap(so_embeds, so_vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "x", "v.x"], size=2.5, outline=True)
         return plot
 
+    def cmap_CQ():
+        nonlocal embeds
+
+        plot = VisPlot(3, num_subplots=3) # 3D plot, 2 for 2D plot
+        print(embeds.shape)
+        plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis"], cby=["phi0", "H", "L"], size=1.5, outline=False)
+        # plot.add_with_cmap(so_embeds, so_vals, cmap=["husl", "viridis", "viridis"], cby=["phi0", "H", "L"], size=2.5, outline=True)
+        return plot
+
+
     def cmap_one():
         plot = VisPlot(3)
         print(embeds.shape)
-        plot.add_with_cmap(embeds, vals, cmap="viridis", cby="y", size=3, outline=True)
+        # plot.add_with_cmap(embeds, vals, cmap="viridis", cby="H", size=0.5, outline=False)
+        plot.add_with_cmap(embeds, vals, cmap="viridis", cby="H", size=2.5, outline=False)
+        # plot.add_with_cmap(so_embeds, so_vals, cmap=["viridis"], cby=["H"], size=2, outline=True)
+
         return plot
 
     #plot = add_demo()
-    plot = cmap_three()
-    #plot = cmap_one()
+    # plot = cmap_three()
+    # plot = cmap_CQ()
+    plot = cmap_one()
 
     plot.show()
     if args.server:

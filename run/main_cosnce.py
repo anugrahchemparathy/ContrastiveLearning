@@ -18,7 +18,9 @@ from ldcl.losses.simclr import NT_Xent_loss, infoNCE
 #from ldcl.losses.simsiam import simsiam
 from ldcl.plot.plot import plot_loss
 from ldcl.tools.device import get_device, t2np
-from ldcl.tools import metrics, utils, main
+# from ldcl.tools import metrics, utils, main
+from ldcl.tools import metrics
+
 
 import tqdm
 
@@ -84,7 +86,10 @@ def training_loop(args):
         encoder = branch.branchImageEncoder(encoder_out=1024, useBatchNorm=True, encoder_hidden=768, num_layers=2)
         proj_head = branch.projectionHead(head_in=1024, head_out=1024, num_layers=3, hidden_size=512)
     else:
-        encoder = branch.branchImageEncoder(encoder_out=3, useBatchNorm=True)
+        # encoder = branch.branchImageEncoder(encoder_out=3, useBatchNorm=True)
+        # proj_head = branch.projectionHead(head_in=3, head_out=4, num_layers=3, hidden_size=128)
+
+        encoder = branch.branchEncoder(encoder_out=3)
         proj_head = branch.projectionHead(head_in=3, head_out=4, num_layers=3, hidden_size=128)
     #proj_head = branch.projectionHead(head_in=3, head_out=4)
 
@@ -121,9 +126,10 @@ def training_loop(args):
         t.set_postfix(**mtrd)
     
     if is_natural:
-        emtrs = {
-            "knn_u": lambda: utils.knn_monitor(model.encoder, train_orbits_loader2, test_orbits_loader, device=str(device), mp=args.mixed_precision),
-        }
+        pass
+        # emtrs = {
+        #     "knn_u": lambda: utils.knn_monitor(model.encoder, train_orbits_loader2, test_orbits_loader, device=str(device), mp=args.mixed_precision),
+        # }
     else:
         emtrs = {}
 

@@ -19,7 +19,7 @@
             "min": 0,
             "max": 100 
         },
-        "noise": 0.3,
+        "noise": 0.01,
         "pq_resample_condition": "None",
         "shuffle": "True",
         "check": "False"

@@ -30,7 +30,7 @@ import pathlib
 SCRIPT_PATH = pathlib.Path(__file__).parent.resolve().as_posix() + "/" # always get this directory
 
 #saved_epochs = list(range(20)) + [20,40,60,80,100,200,300,400,500,600,700,1000,1400]
-saved_epochs = list(range(0, 10000, 20))
+saved_epochs = list(set(list(range(20)) + list(range(0, 10000, 20))))
 
 def training_loop(args):
     global saved_epochs
@@ -86,7 +86,9 @@ def training_loop(args):
         encoder = branch.branchImageEncoder(encoder_out=1024, useBatchNorm=True, encoder_hidden=768, num_layers=2)
     else:
         # encoder = branch.branchImageEncoder(encoder_out=3)
-        encoder = branch.branchEncoder(encoder_out=3)
+        # encoder = branch.branchEncoder(encoder_out=3, activation=nn.Sigmoid(), useBatchNorm=True)
+        # encoder = branch.branchEncoder(encoder_out=3, activation=nn.ReLU())
+        encoder = branch.branchEncoder(encoder_out=3, activation=nn.ReLU(), useBatchNorm=True)
 
     model = branch.sslModel(encoder=encoder)
     model.to(device)
