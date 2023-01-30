@@ -26,8 +26,10 @@ def main_plot(args):
         print(_)
         single_orbit, _ = get_dataset("../data_configs/single_orbit.json", "../../saved_datasets")
 
-    embeds, vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", dataset, device=device)
-    so_embeds, so_vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", single_orbit, device=device)
+    model_path = f"../saved_models/{args.fname}/{args.id}_encoder.pt"
+
+    embeds, vals = embed(model_path, dataset, device=device)
+    so_embeds, so_vals = embed(model_path, single_orbit, device=device)
     so_embeds = so_embeds[::10]
     for key in so_vals.keys():
         so_vals[key] = so_vals[key][::10]
