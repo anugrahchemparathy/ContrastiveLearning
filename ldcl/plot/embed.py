@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import math
 import tqdm
+import torch.nn as nn
 
 from ..tools.device import t2np
 
@@ -19,13 +20,10 @@ def embed(encoder_location_or_encoder, orbits_dataset, device=None):
             and (2) a dictionary of H, L, phi0, x, y, v.x, v.y
     """
 
-    orbits_loader = torch.utils.data.DataLoader(
-        dataset = orbits_dataset,
-        shuffle = True,
-        batch_size = 1,
-    )
-
-    if isinstance(encoder_location_or_encoder, str):
+    if isinstance(encoder_location_or_encoder, list):
+        components = [torch.load(model_component, map_location=torch.device('cpu')) for model_component in encoder_location_or_encoder]
+        branch_encoder = nn.Sequential(*components)
+    elif isinstance(encoder_location_or_encoder, str):
         branch_encoder = torch.load(encoder_location_or_encoder, map_location=torch.device('cpu'))
     else:
         print("using encoder")

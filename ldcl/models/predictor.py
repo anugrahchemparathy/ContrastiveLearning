@@ -1,6 +1,8 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+import os
+
 
 class TopPredictor(nn.Module):
     def __init__(self, encoder, predictor=None, predictor_output = 3, fine_tuning = False, predictor_hidden = 64):
@@ -54,3 +56,6 @@ class predictor(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
+    def save(self, path, name):
+        torch.save(self.net, os.path.join(path, f'{name}_predictor.pt'))

@@ -77,6 +77,7 @@ def training_loop(args):
 		model.to(device)
   
 	online_model.save(save_progress_path, 'start')
+	predictor_network.save(save_progress_path, 'start')
 
 	sgd_params = online_model.params(args.lr)
 	sgd_params[0]['params'] += list(predictor_network.parameters())
@@ -120,11 +121,15 @@ def training_loop(args):
 
 			if e in saved_epochs:
 				online_model.save(save_progress_path, f'{e:02d}')
+				predictor_network.save(save_progress_path, f'{e:02d}')
+
+
 			t.set_postfix(loss=loss.item(),
 							loss50_avg=np.mean(np.array(losses[max(-1 * e, -50):])))
 			t.update()
 
 	online_model.save(save_progress_path, 'final')
+	predictor_network.save(save_progress_path, 'final')
 	losses = np.array(losses)
 	np.save(os.path.join(save_progress_path, "loss.npy"), losses)
 	plot_loss(losses, title=args.fname, save_progress_path=save_progress_path)

@@ -26,7 +26,14 @@ def main_plot(args):
         print(_)
         single_orbit, _ = get_dataset("../data_configs/single_orbit.json", "../../saved_datasets")
 
-    model_path = f"../saved_models/{args.fname}/{args.id}_encoder.pt"
+    model_encoder_path = f"../saved_models/{args.fname}/{args.id}_encoder.pt"
+    model_projector_path = f"../saved_models/{args.fname}/{args.id}_projector.pt"
+    model_predictor_path =f"../saved_models/{args.fname}/{args.id}_predictor.pt"
+
+    model_path = model_encoder_path
+    # model_path = [model_encoder_path, model_projector_path]
+    # model_path = [model_encoder_path, model_projector_path, model_predictor_path]
+
 
     embeds, vals = embed(model_path, dataset, device=device)
     so_embeds, so_vals = embed(model_path, single_orbit, device=device)
