@@ -64,10 +64,13 @@ def main_plot(args):
     def cmap_three():
         nonlocal embeds
 
-        plot = VisPlot(3, num_subplots=5) # 3D plot, 2 for 2D plot
+        plot = VisPlot(3, num_subplots=3) # 3D plot, 2 for 2D plot
         print(embeds.shape)
-        plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "x", "v.x"], size=1.5, outline=False)
-        plot.add_with_cmap(so_embeds, so_vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "x", "v.x"], size=2.5, outline=True)
+        # plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "x", "v.x"], size=1.5, outline=False)
+        # plot.add_with_cmap(so_embeds, so_vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "x", "v.x"], size=2.5, outline=True)
+
+        plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis"], cby=["phi0", "H", "L"], size=1.5, outline=False)
+        plot.add_with_cmap(so_embeds, so_vals, cmap=["husl", "viridis", "viridis"], cby=["phi0", "H", "L"], size=2.5, outline=True)
         return plot
 
     def cmap_CQ():
@@ -90,9 +93,9 @@ def main_plot(args):
         return plot
 
     #plot = add_demo()
-    # plot = cmap_three()
+    plot = cmap_three()
     # plot = cmap_CQ()
-    plot = cmap_one()
+    # plot = cmap_one()
 
     plot.show()
     if args.server:

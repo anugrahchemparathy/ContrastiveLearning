@@ -1,12 +1,12 @@
 {
     "dynamics": "orbits",
     "modality": "numerical",
-    "use_cached_data": "True",
+    "use_cached_data": "False",
     "verbose": "True",
     "orbit_settings": {
         "mu": 1.0,
-        "num_trajs": 10240,
-        "num_ts": 10,
+        "num_trajs": 1024,
+        "num_ts": 100,
         "traj_distr": {
             "type": "uniform",
             "dims": 3,
@@ -22,8 +22,7 @@
         "noise": 0,
         "pq_resample_condition": "None",
         "shuffle": "True",
-        "check": "False",
-        "traj_range": 0.10
+        "check": "False"
     },
     "pendulum_imagen_settings": {
         "noise": 0,

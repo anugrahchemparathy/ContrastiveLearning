@@ -11,6 +11,43 @@ from scipy.signal import savgol_filter
 
 from .color import get_cmap
 
+def plot_loss(metric, title, save_progress_path, xlabel = 'Epochs', ylabel = 'Loss', save_name = 'training_loss.png'):
+    metric = savgol_filter(metric, 51, 3)
+    plt.figure()
+    plt.plot(np.arange(metric.shape[0]), metric)
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+
+    plt.savefig(os.path.join(save_progress_path, save_name))
+
+def plot_metric(metrics, title, save_progress_path, xlabel = 'Epochs', ylabel = 'Loss', save_name = 'training_loss', legend = None):
+    plt.figure()
+
+    for metric in metrics:
+        if isinstance(metric, list): metric = np.array(metric)
+        plt.plot(np.arange(metric.shape[0]), metric)
+        plt.title(title)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        
+        if legend: plt.legend(legend)
+
+        plt.savefig(os.path.join(save_progress_path, save_name + '.png'))
+    
+
+    # for metric in metrics:
+    #     metric = savgol_filter(metric, 51, 3)
+    #     plt.plot(np.arange(metric.shape[0]), metric)
+    #     plt.title(title)
+    #     plt.xlabel(xlabel)
+    #     plt.ylabel(ylabel)
+
+    #     if legend: plt.legend(legend)
+
+    #     plt.savefig(os.path.join(save_progress_path, save_name + '_savgol' + '.png'))
+
+
 class VisPlot:
     """
         Plot class for easy plotting!
@@ -247,12 +284,5 @@ class VisPlot:
         elif self.mode == "plotly_3d":
             self.fig.write_html('plot.html', auto_open=True)
 
-def plot_loss(loss, title, save_progress_path):
-    loss = savgol_filter(loss, 51, 3)
-    plt.plot(np.arange(loss.shape[0]), loss)
-    plt.title(title)
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
 
-    plt.savefig(os.path.join(save_progress_path, f'training_loss.png'))
 
