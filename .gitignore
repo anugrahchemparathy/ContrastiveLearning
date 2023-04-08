@@ -28,3 +28,13 @@ run/Ignore*.ipynb
 run/visualizations/train_progression/*.png
 
 .idea/
+
+data/
+run/cifar10_ckpts
+run/visualizations/1x/
+run/visualizations/PDF/
+run/visualizations/*.png
+run/visualizations/*.pdf
+run/visualizations/*.ai
+run/visualizations/*.svg
+run/visualizations/*.eps

@@ -19,6 +19,8 @@ from .config import read_config
 
 from .pendulum import pendulum_num_gen, pendulum_img_gen
 from .orbit import orbits_num_with_resampling, orbits_img_gen
+from .double_pendulum import dpend_num_gen
+from .kdv import kdv_gen
 
 rng = np.random.default_rng(9)  # manually seed random number generator
 verbose = True
@@ -116,6 +118,10 @@ def get_dataset(config, saved_dir, return_bundle=False, no_aug=False):
     """
     if "cifar10" in config or "cifar100" in config:
         return get_natural_dataset(config, no_aug=no_aug)
+    elif "double_pendulum" in config:
+        return get_double_pend_dataset(config, saved_dir)
+    elif "kdv" in config:
+        return get_kdv_dataset(config, saved_dir)
     else:
         return get_conservation_dataset(config, saved_dir, return_bundle)
 
@@ -137,6 +143,13 @@ def get_natural_dataset(config, no_aug=False):
         raise NotImplementedError
 
     return NaturalDataset(dataset, sz=32, no_aug=no_aug), dsname + "_train" if train else "_test"
+
+def get_double_pend_dataset(config, path):
+    return ConservationDataset(dpend_num_gen(config, path)), "double_pendulum"
+
+def get_kdv_dataset(config, path):
+    print(config)
+    return ConservationDataset(kdv_gen(config, path)), "kdv"
 
 def get_conservation_dataset(config, saved_dir, return_bundle=False):
     if isinstance(config, str):

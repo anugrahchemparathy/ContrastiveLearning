@@ -22,14 +22,15 @@ def main_plot(args):
         #dataset, _ = get_dataset("../data_configs/orbit_resz_medxl.json", "../../saved_datasets")
         single_orbit, _ = get_dataset("../data_configs/single_orbit_image.json", "../../saved_datasets")
     else:
-        dataset, _ = get_dataset("../data_configs/orbit_config_default.json", "../../saved_datasets")
+        dataset, _ = get_dataset("../data_configs/complete_orbits.json", "../../saved_datasets")
         single_orbit, _ = get_dataset("../data_configs/single_orbit.json", "../../saved_datasets")
 
     embeds, vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", dataset, device=device)
+    so_embeds, so_vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", single_orbit, device=device)
 
     # utility modifications
+    """
     vals["L"] = np.minimum(1, vals["L"])
-    so_embeds, so_vals = embed(f"../saved_models/{args.fname}/{args.id}_encoder.pt", single_orbit, device=device)
     so_embeds = so_embeds[::10]
     for key in so_vals.keys():
         so_vals[key] = so_vals[key][::10]
@@ -38,6 +39,7 @@ def main_plot(args):
     embeds = embeds[mask]
     for key in vals.keys():
         vals[key] = vals[key][mask]
+    """
 
 
     """
@@ -58,10 +60,12 @@ def main_plot(args):
     def cmap_three():
         nonlocal embeds
 
-        plot = VisPlot(3, num_subplots=6) # 3D plot, 2 for 2D plot
+        plot = VisPlot(3, num_subplots=2) # 3D plot, 2 for 2D plot
         print(vals.keys())
-        plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "x", "v.x", "ecc"], size=1.5, outline=False)
-        plot.add_with_cmap(so_embeds, so_vals, cmap=["husl", "viridis", "viridis", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "x", "v.x", "ecc"], size=2.5, outline=True)
+        #plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "ecc"], size=1.5, outline=False)
+        #plot.add_with_cmap(so_embeds, so_vals, cmap=["husl", "viridis", "viridis", "viridis"], cby=["phi0", "H", "L", "ecc"], size=2.5, outline=True)
+        plot.add_with_cmap(embeds, vals, cmap=["husl", "viridis"], cby=["phi0","ecc"], size=1.5, outline=False)
+        plot.add_with_cmap(so_embeds, so_vals, cmap=["husl", "viridis"], cby=["phi0", "ecc"], size=2.5, outline=True)
         return plot
 
     def cmap_one():

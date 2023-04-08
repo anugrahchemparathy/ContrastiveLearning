@@ -40,7 +40,7 @@ def main_plot(args):
     so_embeds = so_embeds[::10]
     for key in so_vals.keys():
         so_vals[key] = so_vals[key][::10]
-    
+
     # mask = np.less(vals['phi0'], 3.14)
     # embeds = embeds[mask]
     # for key in vals.keys():
@@ -87,7 +87,7 @@ def main_plot(args):
         plot = VisPlot(3)
         print(embeds.shape)
         # plot.add_with_cmap(embeds, vals, cmap="viridis", cby="H", size=0.5, outline=False)
-        plot.add_with_cmap(embeds, vals, cmap="viridis", cby="H", size=2.5, outline=False)
+        plot.add_with_cmap(embeds, vals, cmap="viridis", cby="L", size=2.5, outline=False)
         # plot.add_with_cmap(so_embeds, so_vals, cmap=["viridis"], cby=["H"], size=2, outline=True)
 
         return plot

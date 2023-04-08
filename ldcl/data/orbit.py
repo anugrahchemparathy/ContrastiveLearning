@@ -65,12 +65,18 @@ def orbits_num_gen(config):
         if not isinstance(settings.traj_range, float) and not isinstance(settings.traj_range, int):
             t = sample_distribution(settings.t_distr, settings.num_trajs * settings.num_ts).reshape((settings.num_trajs, settings.num_ts))
         else:
-            t = np.repeat(sample_distribution(settings.t_distr, settings.num_trajs)[:, np.newaxis], settings.num_ts, axis=1)
-            lim = T * settings.traj_range
-            if config.modality == "image":
-                lim = lim[:, :, 0]
-            eps = rng.uniform(size=(settings.num_trajs, settings.num_ts)) * lim
-            t = t + eps
+            if not isinstance(settings.endpoints, str):
+                t = np.repeat(sample_distribution(settings.t_distr, settings.num_trajs)[:, np.newaxis], settings.num_ts, axis=1)
+                lim = T * settings.traj_range
+                if config.modality == "image":
+                    lim = lim[:, :, 0]
+                eps = rng.uniform(size=(settings.num_trajs, settings.num_ts)) * lim
+                t = t + eps
+            else:
+                assert(settings.num_ts == 2)
+                print('endpoints mode')
+                t = sample_distribution(settings.t_distr, settings.num_trajs * 1).reshape((settings.num_trajs, 1))
+                t = np.concatenate((t, t + settings.traj_range), axis=1)
 
         if config.modality == "image":
             factor = config.orbits_imagen_settings.diff_time / config.orbits_imagen_settings.num_pts

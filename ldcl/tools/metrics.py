@@ -124,7 +124,7 @@ def lin_eval(encoder, train_loader, test_loader, ind=None, do_print=False, devic
 
             def forward_step():
                 nonlocal y
- 
+
                 with torch.no_grad():
                     b = encoder(inputs.to(device))
                 logits = classifier(b)
@@ -167,6 +167,22 @@ def lin_eval(encoder, train_loader, test_loader, ind=None, do_print=False, devic
                 print(line_to_print)
     return accuracy
 
+
+def eval_on_loader(model, loader, loss, device='cpu'):
+    model.eval()
+
+    with torch.no_grad():
+        losses = []
+        for it, (input1, input2, y) in enumerate(loader):
+            input1 = input1[:,0,:].type(torch.float32).to(device)
+            input2 = input2[:,0,:].type(torch.float32).to(device)
+
+            z1 = model(input1)
+            z2 = model(input2)
+
+            losses.append(loss(z1, z2).cpu())
+
+    return np.mean(np.array(losses))
 """
 import torch
 import math

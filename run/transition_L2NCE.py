@@ -62,7 +62,7 @@ def constrained_training_loop(args, threshhold):
 
 
     # encoder = branch.branchEncoder(encoder_out=3, activation=nn.Sigmoid(), useBatchNorm=True)
-    encoder = branch.branchEncoder(encoder_out=3, activation=nn.ReLU())
+    encoder = branch.branchEncoder(encoder_out=3, encoder_hidden=16, num_layers=2, activation=nn.ReLU())
     # encoder = branch.branchEncoder(encoder_out=3, activation=nn.ReLU(), useBatchNorm=True)
 
     model = branch.sslModel(encoder=encoder)
@@ -76,9 +76,11 @@ def constrained_training_loop(args, threshhold):
         return loss
 
     losses = []
-    mtrd = {"loss": None, "avg_loss": None}
-    saved_metrics = {'H':[], 'L':[]}
-    reg = LinearRegression()
+    mtrd = {"loss": None, "avg_loss": None, "lr_eval": None}
+    #saved_metrics = {'H':[], 'L':[]}
+    #saved_metrics = {'eval': []}
+    is_dp = "double_pendulum" in args.data_config
+    saved_metrics = {'L': []} if not is_dp else {'three': []}
 
 
     def update_metrics(t, new_loss=None, losses=None, do_eval=False):
@@ -89,31 +91,37 @@ def constrained_training_loop(args, threshhold):
 
 
         outputs = []
-        labels = {'H':[],'L':[],'phi0':[]}
+        #labels = {'H':[],'L':[],'phi0':[]}
+        labels = {'H': [], 'L': [], 'phi0': []} if not is_dp else {'one': [], 'two': [], 'three': []}
         model.eval()
         for it, (input1, input2, y) in enumerate(metric_orbits_loader):
             # if it >= 2: break
             input1 = input1.type(torch.float32).to(device)
-            output1 = model(torch.squeeze(input1))
+            for label in labels.keys():
+                if not is_dp:
+                    output1 = model(torch.squeeze(input1))
+                    labels[label].append(torch.squeeze(y[label])[:,0])
+                else:
+                    mask = y["one"][:, 0] < -1.5
+                    output1 = model(torch.squeeze(input1))[mask]
+                    labels[label].append(y[label][mask, 0]) # low energy only
             outputs.append(output1)
-            for label in ['H','L','phi0']:
-                labels[label].append(torch.squeeze(y[label])[:,0])
 
         outputs = torch.cat(outputs).cpu().detach().numpy()
-        for label in ['L']:
+        for label in saved_metrics.keys():
             labels[label] = torch.cat(labels[label]).cpu().detach().numpy()
 
+        for key in saved_metrics.keys():
+            reg = LinearRegression()
+            reg.fit(outputs, labels[key])
+            L_score = reg.score(outputs,labels[key])
+            saved_metrics[key].append(L_score)
+            mtrd["lr_eval"] = L_score
 
-        reg.fit(outputs, labels['L'])
-        L_score = reg.score(outputs,labels['L'])
-        saved_metrics['L'].append(L_score)
-            
         t.update()
         t.set_postfix(**mtrd)
 
         return L_score
-
-
 
     L_scores = []
 
@@ -172,13 +180,14 @@ def collect_data(args):
             shutil.rmtree(save_progress_path)
     os.mkdir(save_progress_path)
 
-    num_trials = 16
+    is_dp = "double_pendulum" in args.data_config
+    num_trials = 3 if args.is_dp else 16
     L_scores = []
     for i in range(num_trials):
         print("Trial", i)
-        trial_L_scores  = constrained_training_loop(args, threshhold=0.8)
+        trial_L_scores  = constrained_training_loop(args, threshhold=0.6 if args.is_dp else 0.8)
         L_scores.append(trial_L_scores)
-    
+
     plot_metric(L_scores, title = "L fitting with 5\% trajectories", save_progress_path = save_progress_path, ylabel = 'R2 value', save_name = 'L_fitting', legend = [f'trial {i}' for i in range(len(L_scores))])
 
     with open(os.path.join(save_progress_path, 'L_score_list.pkl'), 'wb') as f:
